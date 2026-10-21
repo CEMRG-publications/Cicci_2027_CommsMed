@@ -29,11 +29,11 @@ def main():
     gpe_folder = OUTPUT_DIR + "/ToRORd_dynCl/GPE_Matern_GL"
 
     # path to folder where GSA results will be saved
-    gsa_folder = OUTPUT_DIR + "/gsa"
+    gsa_folder = OUTPUT_DIR + "/ToRORd_dynCl/GSA"
     os.makedirs(gsa_folder, exist_ok=True)
 
     # choose cut-off threshold for GSA
-    cutoff = 0.75 #0.9
+    cutoff = 0.8
 
     # mode to rank the parameters according to STi, for i in idx_features 
     mode = "max" # max | sum | mean
@@ -102,7 +102,6 @@ def main():
         ST = np.loadtxt(output_dir + "/" + str(idx) + "/STi_median.txt")
         ST_all[:, i] = ST
 
-    '''
     # plot heat map
     msfun.gsa_heat(
         ST_all,
@@ -118,7 +117,6 @@ def main():
         height=14,
         width=max(10, 10 * len(ylabels) / 20),
     )
-    '''
 
     # plot input rank, with specified cut-off
     print(
@@ -148,24 +146,6 @@ def main():
         separate_colors=True,
         cutoff_th=cutoff,
     )
-
-    '''
-    # plot parameter ranking: Sobol indices >= cut-off * Sobol index of 1-st input
-    msfun.plot_rank_GSA_mod(
-        data_dir + "/",
-        output_dir + "/",
-        criterion="STi_median",
-        mode=mode,
-        figname=plot_dir
-        + "/Rank_" + mode + "_STi_wrt_ST1x"
-        + str(round(1 - cutoff, 2))
-        + ".png",
-        th=0.0,
-        normalise=False,
-        separate_colors=True,
-        cutoff_th=1 - cutoff,
-    )
-    '''
 
 
 if __name__ == "__main__":

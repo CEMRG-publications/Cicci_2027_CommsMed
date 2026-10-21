@@ -5,6 +5,15 @@ This file is part of 'Cicci_2027_CommsMed'.
 
 __author__ = Ludovica Cicci
 __email__ = l.cicci@imperial.ac.uk
+
+The functions in this file were extracted from the library of Marina Strocchi:
+https://github.com/CEMRG-publications/Strocchi_2023_PLoSCompBio
+
+Please cite:
+Strocchi M, Longobardi S, Augustin CM, Gsell MAF, Petras A, Rinaldi CA, Vigmond EJ,
+Plank G, Oates CJ, Wilkinson RD, Niederer SA. Cell to whole organ global sensitivity
+analysis on a four-chamber heart electromechanics model using Gaussian processes
+emulators. PLoS Comput Biol. 2023;19(6):e1011257. doi:10.1371/journal.pcbi.1011257
 """
 
 # dependencies
@@ -297,7 +306,7 @@ def gsa_heat(
     plt.rc("text", usetex=False)
 
     plt.tight_layout()
-    plt.savefig(savepath + img_name, bbox_inches="tight", dpi=1000)
+    plt.savefig(savepath + img_name, bbox_inches="tight", dpi=300)
 
 
 def plot_rank_GSA(
@@ -436,134 +445,4 @@ def plot_rank_GSA(
     if figname == "":
         plt.show()
     else:
-        plt.savefig(figname)
-
-
-def plot_rank_GSA_mod(
-    datapath,
-    loadpath,
-    rank_file=None,
-    criterion="STi_median",
-    mode="max",
-    figname="",
-    normalise=False,
-    th=0.0,
-    annotate=False,
-    figsize=(18, 3),
-    fontsize=6,
-    xlabels_latex=None,
-    separate_colors=False,
-    color_important=None,
-    cutoff_th=0.2,
-):
-    """
-    Plots the parameter ranking for a .
-
-    Args:
-        - datapath: folder with data (xlabels.txt, etc...)
-        - loadpath: path where you saved your parameter ranking
-        - rank_file: if you want to provide a different parameter ranking file
-                     that is not in the loadpath folder
-        - criterion: STi or Si e.g. total or first order effects to use for ranking
-        - mode: max or mean to rank the parameters
-        - figname: name of output figure
-        - normalise: if you want to normalise so that the values all sum up to 1
-        - th: threshold to determine which parameters are important and which ones aren't
-        - annotate: write numbers on top of each bar
-        - figsize: size of output figure
-        - fontsize: size of figure font
-        - xlabels_latex: parameter names in latex for paper plots
-        - separate_colors: if you want a different colour for important and unimportant parameters
-        - color_important: what colour you want the important parameter bars to be
-        - cutoff_th: fraction of output variance explained by the most important parameters
-    """
-
-    color = ["#ff8000"]
-
-    # assumes that xlabels and ylabels are the same for all tests
-    index_i = read_labels_from_file(datapath + "/xlabels.txt")
-
-    x = np.arange(len(index_i))
-    barWidth = 0.25
-
-    fig, ax = plt.subplots(1, 1, figsize=figsize, constrained_layout=True)
-
-    if rank_file is None:
-        rank_file = loadpath + "/Rank_" + criterion + "_" + mode + ".txt"
-
-    f = open(rank_file, "r")
-    lines = f.readlines()
-
-    r_dct = {}
-    for line in lines:
-        line_split = re.split(r"\t+", line)
-        r_dct[line_split[0]] = float(line_split[1])
-
-    bars = []
-    for l in index_i:
-        bars.append(r_dct[l])
-    idx_sorted = np.argsort(np.array(bars))
-
-    r = [xx + barWidth for xx in x]
-
-    bars_sorted = [bars[idx] for idx in idx_sorted]
-    bars_sorted = bars_sorted[::-1]
-    if xlabels_latex is not None:
-        index_i_sorted = [xlabels_latex[idx] for idx in idx_sorted]
-    else:
-        index_i_sorted = [index_i[idx] for idx in idx_sorted]
-    index_i_sorted = index_i_sorted[::-1]
-
-    bars_sorted_norm = list(np.array(bars_sorted) / sum(bars_sorted))
-
-    if normalise:
-        barplot = bars_sorted_norm
-    else:
-        barplot = bars_sorted
-
-    plt.xticks(x + barWidth, index_i_sorted, rotation=90, fontsize=fontsize)
-    ax.tick_params(axis="both", labelsize=fontsize)
-
-    cutoff_param = np.where(np.array(bars_sorted) < cutoff_th * bars_sorted[0])[0][0]
-    if color_important is None:
-        color_important = (
-            0.0,  # redness
-            0.502,  # greenness
-            0.502,  # blueness
-            0.8,  # transparency
-        )
-    color_unimportant = "lightgray"
-    colors = [
-        color_important,
-    ] * (cutoff_param + 1) + [
-        color_unimportant,
-    ] * (len(bars_sorted) - cutoff_param - 1)
-
-    if separate_colors:
-        bars = ax.bar(r, barplot, width=barWidth, edgecolor="white", color=colors)
-    else:
-        bars = ax.bar(r, barplot, color=color, width=barWidth, edgecolor="white")
-
-    if "STi" in criterion:
-        ax.set_ylabel("$ST$", fontsize=fontsize)
-    else:
-        ax.set_ylabel("$S_1$", fontsize=fontsize)
-
-    if th > 0:
-        ax.plot(
-            [-2 * barWidth, len(index_i) + 2 * barWidth],
-            [th, th],
-            color="black",
-            linestyle="--",
-        )
-
-    plt.legend()
-
-    y_max = np.ceil(np.max(np.array(barplot)) * 10) / 10
-    cutoff = r[cutoff_param] + 2 * barWidth
-    ax.plot([cutoff, cutoff], [0, y_max], color="black", linestyle="--")
-
-    if figname == "":
-        plt.show()
-    else:
-        plt.savefig(figname)
+        plt.savefig(figname, bbox_inches="tight", dpi=300)

@@ -10,6 +10,7 @@ __email__ = l.cicci@imperial.ac.uk
 # extra imports
 import os
 import sys
+import multiprocessing
 import numpy as np
 
 # make config.py (in the parent folder) importable
@@ -25,19 +26,26 @@ from GPErks.serialization.labels import read_labels_from_file
 def main():
     check_paths("OUTPUT_DIR")
 
-    # current ECG segment
-    ECGsegment = "QRScomplex"
-
-    # if True, train the GPEs of the single-cell model (data from 0_single_cell.py) instead of
-    # the GPEs of the ECG
+    # If True, train the GPEs. Otherwise, build data folder for sample "0" and stop
+    train_gpes = True
+    
+    # If True, train GPEs on single-cell outputs. Otherwise, use ECG outputs
     single_cell = False
 
-    # if True, train the GPEs. If False, only build the data folder of a target (which has a
-    # single sample, so no GPE can be trained): the data are written in the target qoi folder
-    train_gpes = True
+    if single_cell:
+        gpe_folder_basename = OUTPUT_DIR + "/ToRORd_dynCl"
+    else:
+        gpe_folder_basename = OUTPUT_DIR + "/KCL1/History_Matching"
 
-    # last wave included in the training data (0: initial space only)
-    waveno = 2
+        # current ECG segment
+        ECGsegment = "QRScomplex"
+
+        if not train_gpes:
+            # target folder for current case
+            target_folder = OUTPUT_DIR + "/KCL1/target"
+        else:
+            # last wave included in the training data (0: initial space only)
+            waveno = 0
 
     # choose kernel type
     kernel_type = "Matern"
@@ -47,10 +55,10 @@ def main():
 
     if single_cell:
         qoi_folder_list = [OUTPUT_DIR + "/ToRORd_dynCl/qoi"]
-        gpe_folder = OUTPUT_DIR + "/ToRORd_dynCl/GPE_" + kernel_type + "_" + esc_type
+        gpe_folder = gpe_folder_basename + "/GPE_" + kernel_type + "_" + esc_type
     elif train_gpes:
         # path(s) to folder with QoI(s): initial space and waves 1 to waveno
-        qoi_basefolder = OUTPUT_DIR + "/KCL/History_Matching/" + ECGsegment
+        qoi_basefolder = gpe_folder_basename + "/" + ECGsegment
         qoi_folder_list = [qoi_basefolder + "/qoi_initial_space"] + [
             qoi_basefolder + "/qoi_wave_" + str(k) for k in range(1, waveno + 1)
         ]
@@ -58,8 +66,8 @@ def main():
         # path to folder where GPE(s) will be saved. NOTE: can't be on an external disk
         wave_name = "initial_space" if waveno == 0 else "wave_" + str(waveno)
         gpe_folder = (
-            OUTPUT_DIR
-            + "/gpe/KCL/"
+            gpe_folder_basename
+            + "/gpe/"
             + ECGsegment
             + "/"
             + wave_name
@@ -69,7 +77,7 @@ def main():
             + esc_type
         )
     else:
-        qoi_folder_list = [OUTPUT_DIR + "/KCL/target/qoi_" + ECGsegment]
+        qoi_folder_list = [target_folder + "/qoi_" + ECGsegment]
         gpe_folder = qoi_folder_list[0]
 
     # ================================================================
@@ -158,5 +166,8 @@ def main():
     else:
         data_processing.write_summary(summaryfile + "_updated", ylabels, output_dir)
 
+
 if __name__ == "__main__":
+    # start the cross-validation workers as new processes (with "fork" they hang after the first output)
+    multiprocessing.set_start_method("spawn", force=True)
     main()
