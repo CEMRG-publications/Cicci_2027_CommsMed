@@ -16,14 +16,14 @@ Version: [TO BE ADDED]. Licence: [TO BE ADDED].
 6. Trains Gaussian process emulators (GPEs) and runs Bayesian history matching, wave after wave.
 7. Selects the best-fit parameter set (smallest RMSE between emulated and target ECG).
 
-The single-cell model (ToRORd_dynCl) has its own global (Sobol) sensitivity analysis, described in step 0 of `workflow.txt`.
+The single-cell model (ToRORd_dynCl) has its own global (Sobol) sensitivity analysis, described in step 0 of `workflow.md`.
 
 ## Folder content
 
 | Path | Content |
 | --- | --- |
 | `config.py` | The two paths you must set (see below). |
-| `workflow.txt` | Step-by-step instructions, with the settings of each script. |
+| `workflow.md` | Step-by-step instructions, with the settings of each script. |
 | `libEP/` | Mesh, sampling, simulation and ECG scripts (numbered in the order of use) and `libEP/utils`. |
 | `libEP/data/` | Parameter files, parameter ranges, label files, CARPentry parameter files and tags. |
 | `libGPE/` | `gpe_training.py`, `history_matching.py`, `sensitivity_analysis.py` and `libGPE/utils`. |
@@ -43,7 +43,7 @@ The single-cell model (ToRORd_dynCl) has its own global (Sobol) sensitivity anal
 - CARPentry release 2024 (academic licence), with meshtool and mguvc. They are not distributed here. Obtain them from the CARPentry authors.
 - GPErks, at upstream commit `dd8b7af` (see "GPErks").
 - Python packages: GPErks, SALib, gpytorch, matplotlib, natsort, numpy, pandas, pytictoc, scipy, seaborn, scikit-learn, torch, torchmetrics.
-  Versions used: [TO BE ADDED, including pandas. The code uses `DataFrame.applymap`, and was not tested with `DataFrame.map`].
+  Versions used: [TO BE ADDED]. NumPy must be below 2 (the pinned GPErks uses `numpy.infty`). `setuptools` must be below 81 (the pinned GPErks imports `pkg_resources`). pandas 2.1 or later is needed (`DataFrame.map`).
 
 ## GPErks
 
@@ -56,6 +56,12 @@ Two files are modified versions of GPErks files (MIT licence, notice in each fil
 
 Copy both files into the folder `GPErks/perks/` of your GPErks installation, next to the original files. They do not replace anything.
 
+## Third-party code
+
+The functions in `libGPE/utils/msfun.py` were extracted from the library of Marina Strocchi: <https://github.com/CEMRG-publications/Strocchi_2023_PLoSCompBio>. Please cite:
+
+Strocchi M, Longobardi S, Augustin CM, Gsell MAF, Petras A, Rinaldi CA, Vigmond EJ, Plank G, Oates CJ, Wilkinson RD, Niederer SA. Cell to whole organ global sensitivity analysis on a four-chamber heart electromechanics model using Gaussian processes emulators. PLoS Comput Biol. 2023;19(6):e1011257. [doi:10.1371/journal.pcbi.1011257](https://doi.org/10.1371/journal.pcbi.1011257)
+
 ## Setup
 
 1. Install the requirements above.
@@ -63,7 +69,7 @@ Copy both files into the folder `GPErks/perks/` of your GPErks installation, nex
    - `CARP_INSTALL_DIR`: the folder where CARPentry is installed (it must contain `bin/carp.pt`, `meshtool/meshtool` and `carputils`);
    - `OUTPUT_DIR`: the folder where all results are written.
    Each script stops with a clear message if a path is not set.
-3. All other settings are variables at the top of `main()` in each script. Edit them there, as described in `workflow.txt`.
+3. All other settings are variables at the top of `main()` in each script. Edit them there, as described in `workflow.md`.
 
 The scripts write all results under `OUTPUT_DIR`. Most of them use the subfolder `OUTPUT_DIR/KCL` and the mesh name `KCL1`. These are names for the case used in the paper, and you can change them.
 
@@ -82,7 +88,7 @@ Patient-derived data are not released. You must supply:
 
 ## How to run
 
-Follow `workflow.txt`. In short:
+Follow `workflow.md`. In short:
 
 | Step | Scripts |
 | --- | --- |

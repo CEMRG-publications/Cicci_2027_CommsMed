@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # path to Bayesian History Matching (BHM) folder
     bhm_folder = basefolder + "/History_Matching/" + ECGsegment
 
-    # path to folder with target data (built with gpe_training.py, see workflow.txt)
+    # path to folder with target data (built with gpe_training.py, see workflow.md)
     target_folder = basefolder + "/target/qoi_" + ECGsegment
 
     # threshold value for implausibility criterion
