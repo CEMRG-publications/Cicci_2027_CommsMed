@@ -23,11 +23,11 @@ from utils import carp_func
 def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"
 
     # directory with current mesh in carp_txt format
-    meshfolder = OUTPUT_DIR + "/torsomesh"
+    meshfolder = OUTPUT_DIR + "/mesh"
 
     # ---> START
     os.makedirs(basefolder, exist_ok=True)
@@ -109,12 +109,16 @@ def main():
         basefolder + "/UVC",
         _RVmyo=_RVmyo,
         _LVmyo=_LVmyo,
-        _SE_RV=_SE_RV + "," + ",".join([str(i) for i in range(int(_SE_RV)*1000+50, int(_SE_RV)*1000+75, 2)]),
-        _SE_LV=_SE_LV + "," + ",".join([str(i) for i in range(int(_SE_LV)*1000+50, int(_SE_LV)*1000+75, 2)]),
-        _SE_septRV=_SE_septRV + "," + ",".join([str(i) for i in range(int(_SE_septRV)*1000+50, int(_SE_septRV)*1000+75, 2)]),
+        _SE_RV=_SE_RV,
+        _SE_LV=_SE_LV,
+        _SE_septRV=_SE_septRV,
         Nz=10,
         Nrho=5,
         cleandir=True,
+        # tags of the fast endocardial conductive layers (see compute_FEC_layers: factor_tag_FEC * SE tag + layer, with layer from 100 * Z_FEC_min to 100 * Z_FEC_max in steps of 100 * deltaZ_FEC)
+        _FEC_RV=",".join([str(i) for i in range(int(_SE_RV)*100+50, int(_SE_RV)*100+75, 2)]),
+        _FEC_LV=",".join([str(i) for i in range(int(_SE_LV)*100+50, int(_SE_LV)*100+75, 2)]),
+        _FEC_septRV=",".join([str(i) for i in range(int(_SE_septRV)*100+50, int(_SE_septRV)*100+75, 2)]),
     )
     # <--- END
 

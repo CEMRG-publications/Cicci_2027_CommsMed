@@ -506,8 +506,7 @@ def extract_SElayer(
 
     # extract LV subendocardial layer (1 element thick)
     index_lvendo = IO.read_surf_to_nodeList(surf_iloc + "/" + endosurf_LV)
-    # TODO: FutureWarning: DataFrame.applymap has been deprecated. Use DataFrame.map instead
-    SElayer_LV = elem_SE[[1, 2, 3, 4]].applymap(lambda x: x in index_lvendo)
+    SElayer_LV = elem_SE[[1, 2, 3, 4]].map(lambda x: x in index_lvendo)
     SElayer_LV_idx = np.where(SElayer_LV.any(axis=1).map(int) == 1)[0]
     elem_SE.loc[SElayer_LV_idx, 5] = int(_SE_LV) + (
         int(_LVmyo) - elem_SE.loc[SElayer_LV_idx, 5]
@@ -515,8 +514,7 @@ def extract_SElayer(
 
     # extract RV subendocardial layer (1 element thick)
     index_rvendo = IO.read_surf_to_nodeList(surf_iloc + "/" + endosurf_RV)
-    # TODO: FutureWarning: DataFrame.applymap has been deprecated. Use DataFrame.map instead
-    SElayer_RV = elem_SE[[1, 2, 3, 4]].applymap(lambda x: x in index_rvendo)
+    SElayer_RV = elem_SE[[1, 2, 3, 4]].map(lambda x: x in index_rvendo)
     SElayer_RV_idx = np.where(SElayer_RV.any(axis=1).map(int) == 1)[0]
     elem_SE.loc[SElayer_RV_idx, 5] = int(_SE_RV) + (
         int(_RVmyo) - elem_SE.loc[SElayer_RV_idx, 5]
@@ -817,8 +815,7 @@ def extract_SElayer(
 
     # set tags of layers such that Z > Zmax_SE back to the corresponding myocardial tags
     subindexall = np.where(100 * Z_SElayer > int(100 * Zmax_SE))[0]
-    # TODO: FutureWarning: DataFrame.applymap has been deprecated. Use DataFrame.map instead
-    subSElayer = elem_SE[[1, 2, 3, 4]].applymap(lambda x: x in subindexall)
+    subSElayer = elem_SE[[1, 2, 3, 4]].map(lambda x: x in subindexall)
     subSE_RVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxRV)
     subSE_LVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxLV)
     subSE_septRVidx = np.intersect1d(
@@ -969,8 +966,7 @@ def compute_FEC_layers(
 
     # set tags of layers such that Z > Zmax_SE back to the corresponding myocardial tags
     subindexall = np.where(100 * Z_SElayer > int(100 * Z_FEC_max))[0]
-    # TODO: FutureWarning: DataFrame.applymap has been deprecated. Use DataFrame.map instead
-    subSElayer = elem_SE[[1, 2, 3, 4]].applymap(lambda x: x in subindexall)
+    subSElayer = elem_SE[[1, 2, 3, 4]].map(lambda x: x in subindexall)
     subSE_RVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxRV)
     subSE_LVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxLV)
     subSE_septRVidx = np.intersect1d(
@@ -989,8 +985,7 @@ def compute_FEC_layers(
             np.where(100 * Z_SElayer >= layer),
             np.where(100 * Z_SElayer < layer + 100 * deltaZ_FEC),
         )
-        # TODO: FutureWarning: DataFrame.applymap has been deprecated. Use DataFrame.map instead
-        subSElayer = elem_SE[[1, 2, 3, 4]].applymap(lambda x: x in subindexall)
+        subSElayer = elem_SE[[1, 2, 3, 4]].map(lambda x: x in subindexall)
         subSE_RVidx = np.intersect1d(
             np.where(subSElayer.any(axis=1).map(int) == 1), idxRV
         )
@@ -1040,6 +1035,7 @@ def segment_submesh(
     factor_tag_SE,
     Nz,
     Nrho,
+    _submsh_FEC="",
 ):
     """Segment biventricular submesh (e.g., RV, LV) into different regions along apico-basal and tranmural direction.
 
@@ -1071,13 +1067,17 @@ def segment_submesh(
         Number of regions along the apico-basal direction.
     Nrho : int
         Number of regions along the transmural direction.
+    _submsh_FEC : str
+        Pre-existing tag(s) for the fast endocardial conductive layers of the submesh. These elements are extracted with the submesh (so that its nodes have the same numbering as the universal ventricular coordinates), but they are not segmented and keep their tags. Use meshtool convention for multiple tags. If any, set "". Default: "".
     """
 
     # find executables
     meshtoolloc = CARP_INSTALL_DIR + "/meshtool/meshtool"
 
     # set submsh tag as the union of myocardium and subendocardial layer tags
-    _submsh = _submsh_myo + "," + _submsh_SE + "," + _submsh_septSE
+    _submsh = ",".join(
+        [t for t in (_submsh_myo, _submsh_SE, _submsh_septSE, _submsh_FEC) if t]
+    )
 
     # extract submesh (i.e., RV or LV) myocardium from biv
     if not meshtool.extract_mesh(
@@ -1169,6 +1169,9 @@ def segment_biventricle(
     Nz=10,
     Nrho=5,
     cleandir=False,
+    _FEC_RV="",
+    _FEC_LV="",
+    _FEC_septRV="",
 ):
     """Segment biventricular myocardium (including FEC layer(s), if any) into different regions along apico-basal and tranmural direction.
 
@@ -1206,6 +1209,14 @@ def segment_biventricle(
         Number of regions along the transmural direction. Maximum value: 5.
     cleandir: bool
         If True, remove simulation output directory. Default: False.
+    _FEC_RV: str
+        Pre-existing tag(s) for the fast endocardial conductive layers on the RV. Use meshtool convention for multiple tags. These elements are not segmented and keep their tags. Default: "".
+    _FEC_LV: str
+        Pre-existing tag(s) for the fast endocardial conductive layers on the LV. Default: "".
+    _FEC_septRV: str
+        Pre-existing tag(s) for the fast endocardial conductive layers on the septum, on the right side. Default: "".
+
+    NOTE: all the fast endocardial conductive layers (if any) must be listed, so that the biventricular mesh extracted here has the same elements, and hence the same node numbering, as the mesh used to compute the universal ventricular coordinates.
     """
 
     # find executables
@@ -1241,7 +1252,10 @@ def segment_biventricle(
     if not meshtool.extract_mesh(
         meshtoolloc,
         meshfolder + "/" + meshname,
-        _RVmyo + "," + _LVmyo + "," + _SE_RV + "," + _SE_LV + "," + _SE_septRV,
+        ",".join(
+            [_RVmyo, _LVmyo, _SE_RV, _SE_LV, _SE_septRV]
+            + [t for t in (_FEC_RV, _FEC_LV, _FEC_septRV) if t]
+        ),
         meshloc + "/" + finalmesh_i,
     ):
         raise Exception("meshtool error. Abort!")
@@ -1261,6 +1275,7 @@ def segment_biventricle(
         factor_tag_SE,
         Nz,
         min(Nrho, 3),
+        _submsh_FEC=",".join([t for t in (_FEC_RV, _FEC_septRV) if t]),
     )
 
     segment_submesh(
@@ -1277,6 +1292,7 @@ def segment_biventricle(
         factor_tag_SE,
         Nz,
         Nrho,
+        _submsh_FEC=_FEC_LV,
     )
 
     # insert biv into torso
