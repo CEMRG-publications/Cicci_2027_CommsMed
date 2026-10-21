@@ -1,0 +1,16 @@
+CV_SE_ratio
+LV_af_Z
+LV_pf_Z
+LV_sf_PHI
+LV_sf_Z
+LV_sf_t
+RV_mod_PHI
+RV_mod_Z
+Zmax_SE
+alpha_endo
+aniso_ratio
+g_bath_blood
+g_bath_inner_body
+vel_f_grad_rho
+vel_f_grad_z
+vel_f_theta

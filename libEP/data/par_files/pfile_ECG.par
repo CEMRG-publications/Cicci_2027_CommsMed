@@ -1,0 +1,10 @@
+# ------------------------------- ELECTROCARDIOGRAM -------------------------------#
+lead_field_mode    = 0
+lead_field_meth    = 1
+dump_lead_fields   = 1
+dump_ecg_leads     = 0
+#phie_rec_meth      = 1
+#phie_rec_ptf       = /path/to/lf_src
+
+#lead_field_ref     = ID_lf_src
+#lead_field_sources = /path/to/lf_src

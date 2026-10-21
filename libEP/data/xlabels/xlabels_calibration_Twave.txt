@@ -1,0 +1,16 @@
+GK1_b_grad_z
+GK1_b_theta
+GKb_b_grad_rho
+GKb_b_grad_z
+GKb_b_theta
+GKr_b_grad_rho
+GKr_b_grad_z
+GKr_b_theta
+GNaL_b_grad_rho
+GNaL_b_grad_z
+GNaL_b_theta
+Gncx_b_grad_z
+Gncx_b_theta
+ICaL_fractionSS
+PCa_b_grad_z
+PCa_b_theta

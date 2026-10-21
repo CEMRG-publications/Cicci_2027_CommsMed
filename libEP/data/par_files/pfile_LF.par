@@ -1,0 +1,10 @@
+# ------------------------------- LEAD FIELD -------------------------------#
+bidomain           = 1
+experiment         = 9
+num_stim           = 0
+lead_field_mode    = 0
+lead_field_meth    = 1
+dump_lead_fields   = 1
+
+#lead_field_ref     = ID_lf_src
+#lead_field_sources = /path/to/lf_src
