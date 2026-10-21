@@ -21,6 +21,6 @@ libEP_DIR = os.path.join(ROOT_DIR, "libEP")
 def check_paths(*names):
     for name in names:
         if not globals()[name]:
-            raise SystemExit(
+            raise Exception(
                 "Please set {} in {}".format(name, os.path.join(ROOT_DIR, "config.py"))
             )

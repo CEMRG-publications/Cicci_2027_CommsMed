@@ -48,6 +48,9 @@ def main():
     # directory where all samples and sampling data will be saved (usually, local HD)
     samplefolder = basefolder + "/samples"
 
+    # number of samples simulated at the same time
+    num_proc = 8
+
     # ---> START
     # IO
     if not os.path.exists(basefolder):
@@ -98,6 +101,7 @@ def main():
         savestate=False,
         cleandir=True,
         visualise=False,
+        num_proc=num_proc,
     )
 
     # compute scalar outputs

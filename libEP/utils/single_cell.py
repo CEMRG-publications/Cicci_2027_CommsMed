@@ -18,6 +18,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA as PCA
 from natsort import natsorted
+from functools import partial
+from multiprocessing import Pool
 
 
 def extract_im_par(samplefolder, labelfolder, imfilename, im="ToRORd_dynCl"):
@@ -339,6 +341,89 @@ def extract_AP(
     return
 
 
+def _screen_sample(
+    i,
+    CARP_INSTALL_DIR,
+    samplefolder,
+    ionicmodel,
+    numstim,
+    tstart,
+    bcl,
+    dt_out,
+    range_dct,
+    savetrace,
+    savestate,
+    cleandir,
+    visualise,
+):
+    """Run the single-cell simulations of one sample, then check them all.
+
+    Returns
+    -------
+    (sample, accepted, missing): the sample name, True if all its AP statistics are
+    within range, and the list of the expected output files that were not written.
+    """
+
+    print("Running single cell simulation for " + str(i) + "-th sample...")
+
+    # current sample output directory
+    SIMID = samplefolder + "/" + str(i)
+    if not os.path.exists(SIMID):
+        os.mkdir(SIMID)
+
+    # folder with imp-combination text file(s)
+    benchfolder = SIMID + "/BENCH"
+
+    # AP stats output folder for current sample
+    APstatfolder = SIMID + "/Action_Potential"
+
+    # run single cell simulations for each combination of ionic model parameters
+    missing = []
+    for j in os.listdir(benchfolder):
+        # current imp paramfile
+        paramfile = (benchfolder + "/" + str(j)).replace(".txt", "")
+        if not os.path.exists(paramfile + ".txt"):
+            raise Exception("Cannot find {}.".format(paramfile + ".txt"))
+
+        carp_func.run_single_cell(
+            CARP_INSTALL_DIR,
+            APstatfolder,
+            paramfile,
+            ionicmodel,
+            numstim=numstim,
+            bcl=bcl,
+            dt_out=dt_out,
+            savetrace=savetrace,
+            savestate=savestate,
+        )
+
+        APstatsname = ionicmodel + "_" + os.path.basename(paramfile) + "_AP_stats"
+        # bench adds "_AP_stats" to the name given with --fout
+        APstatsfile = APstatfolder + "/" + APstatsname + "_AP_stats.dat"
+        if not os.path.exists(APstatsfile):
+            print("WARNING: no AP statistics written for sample {} ({}).".format(i, j))
+            missing.append(APstatsfile)
+        elif savetrace:
+            try:
+                extract_AP(
+                    APstatfolder,
+                    APstatsname,
+                    numstim=numstim,
+                    tstart=tstart,
+                    bcl=bcl,
+                    cleandir=cleandir,
+                    visualise=visualise,
+                )
+            except Exception as e:
+                print("WARNING: sample {}: {}".format(i, e))
+                missing.append(APstatfolder + "/" + APstatsname + ".txt")
+
+    # check the AP statistics of all the combinations
+    rejected = check_AP_stats(APstatfolder, range_dct=range_dct)
+
+    return i, not rejected and not missing, missing
+
+
 def samples_screening(
     CARP_INSTALL_DIR,
     samplefolder,
@@ -357,8 +442,12 @@ def samples_screening(
     savestate=False,
     cleandir=False,
     visualise=False,
+    num_proc=1,
 ):
     """Run single-cell action potential simulation and check AP, for each sample.
+
+    All parameter combinations of a sample are simulated, and then checked together.
+    Samples with missing output file(s) are rejected, and listed in "missing_statistics.txt".
 
     Parameters
     ----------
@@ -386,77 +475,65 @@ def samples_screening(
         If True, remove simulation output directory. Default: False.
     visualise: bool
         If True, plot action potential trace. Defalt: False.
+    num_proc: int
+        Number of samples simulated at the same time. Default: 1 (one after the other). If visualise is True, then num_proc=1.
     """
 
-    # find .txt file with accepted parameters. If already exists, rename it.
+    # stop if the list of accepted samples already exists (it would be overwritten)
     readmefile = samplefolder + "/accepted_samples"
     if os.path.exists(readmefile + ".txt"):
-        readmefile += "_overwritten"
+        raise Exception(
+            "{} already exists. Rename or remove it to screen the samples again. "
+            "Simulations already completed are not run again.".format(
+                readmefile + ".txt"
+            )
+        )
 
-    accepted_samples = "accepted_samples\n"
+    samples = [i for i in natsorted(os.listdir(samplefolder)) if ".txt" not in i]
+
+    screen = partial(
+        _screen_sample,
+        CARP_INSTALL_DIR=CARP_INSTALL_DIR,
+        samplefolder=samplefolder,
+        ionicmodel=ionicmodel,
+        numstim=numstim,
+        tstart=tstart,
+        bcl=bcl,
+        dt_out=dt_out,
+        range_dct=range_dct,
+        savetrace=savetrace,
+        savestate=savestate,
+        cleandir=cleandir,
+        visualise=visualise,
+    )
 
     # for each sample, run single cell simulations and decide to accept or reject the sample
-    for i in natsorted(os.listdir(samplefolder)):
-        if not ".txt" in i:
-            print("Running single cell simulation for " + str(i) + "-th sample...")
+    if num_proc > 1 and not visualise:
+        with Pool(num_proc) as pool:
+            results = pool.map(screen, samples)
+    else:
+        results = [screen(i) for i in samples]
 
-            # current sample output directory
-            SIMID = samplefolder + "/" + str(i)
-            if not os.path.exists(SIMID):
-                os.mkdir(SIMID)
-
-            # folder with imp-combination text file(s)
-            benchfolder = SIMID + "/BENCH"
-
-            # initialise rejection flag
-            reject = False
-
-            # run single cell simulations for each combination of ionic model parameters
-            for j in os.listdir(benchfolder):
-                if not reject:
-                    # AP stats output folder for current sample
-                    APstatfolder = SIMID + "/Action_Potential"
-
-                    # current imp paramfile
-                    paramfile = (benchfolder + "/" + str(j)).replace(".txt", "")
-                    if not os.path.exists(paramfile + ".txt"):
-                        raise Exception("Cannot find {}.".format(paramfile + ".txt"))
-
-                    carp_func.run_single_cell(
-                        CARP_INSTALL_DIR,
-                        APstatfolder,
-                        paramfile,
-                        ionicmodel,
-                        numstim=numstim,
-                        bcl=bcl,
-                        dt_out=dt_out,
-                        savetrace=savetrace,
-                        savestate=savestate,
-                    )
-
-                    if savetrace:
-                        extract_AP(
-                            APstatfolder,
-                            ionicmodel
-                            + "_"
-                            + os.path.basename(paramfile)
-                            + "_AP_stats",
-                            numstim=numstim,
-                            tstart=tstart,
-                            bcl=bcl,
-                            cleandir=cleandir,
-                            visualise=visualise,
-                        )
-
-                    reject = check_AP_stats(
-                        APstatfolder,
-                        range_dct=range_dct,
-                    )
-
-            if not reject:
-                accepted_samples += str(i) + "\n"
+    accepted_samples = "accepted_samples\n"
+    missing_statistics = ""
+    for i, accepted, missing in results:
+        if accepted:
+            accepted_samples += str(i) + "\n"
+        for f in missing:
+            missing_statistics += "sample {}: {}\n".format(i, f)
 
     IO.write_string_text(readmefile, accepted_samples)
+
+    missingfile = samplefolder + "/missing_statistics"
+    if missing_statistics:
+        IO.write_string_text(missingfile, missing_statistics)
+        print(
+            "WARNING: some outputs are missing. See {}. Those samples were rejected.".format(
+                missingfile + ".txt"
+            )
+        )
+    elif os.path.exists(missingfile + ".txt"):
+        os.remove(missingfile + ".txt")
 
     return
 
@@ -471,7 +548,7 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
     outputfolder: str
         Path to the directory where the sample qoi will be saved.
     pca_threshold: int
-        Percentage of output (i.e., Vm and dVm/dt) variance to be explained by the selected PCA modes. Default: 95 [%].
+        Percentage of output (i.e., dVm/dt) variance to be explained by the selected PCA modes. Default: 95 [%].
     visualise: bool
         If True, plot action potential trace. Default: False.
     """
@@ -529,14 +606,12 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
     np.savetxt(Xfolder + "/X.txt", X, fmt="%.6e")
     np.savetxt(Xfolder + "/xlabels.txt", xlabels, fmt="%s")
 
-    # compute output(s) dataset(s): Action Potential (Vm), its derivative (dVm/dt), scalar outputs extracted from AP_stats.dat
-    Vm_all = []
+    # compute output(s) dataset(s): derivative of the Action Potential (dVm/dt), scalar outputs extracted from AP_stats.dat
     dVmdt_all = []
     APD_all = []  # action potential duration
     DI_all = []  # diastolic interval
     Tri_all = []  # triangulation of the AP: APD90-APD40
     Vpeak_all = []  # Vm_max
-    RMP_all = []  # Vm_min (~ resting membrane potential)
 
     for i in natsorted(os.listdir(samplefolder)):
         if not ".txt" in i and str(i) in readme[1:]:
@@ -565,7 +640,6 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
                     DI_all.append(AP_stat[4])
                     Tri_all.append(AP_stat[6])
                     Vpeak_all.append(AP_stat[7])
-                    RMP_all.append(AP_stat[8])
 
                 elif ".txt" in filename:
                     APfile = APfolder + "/" + filename.replace(".txt", "")
@@ -573,8 +647,7 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
                     # load AP for current sample
                     AP = np.genfromtxt(APfile + ".txt", delimiter=" ")[:, 1]
 
-                    # concatenate AP (array) in a list
-                    Vm_all.append(AP)
+                    # concatenate grad-AP (array) in a list
                     dVmdt_all.append(np.gradient(AP))
 
     # save scalar outputs in text files
@@ -590,15 +663,11 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
     IO.write_float_text(yfolder + "/y_Vpeak", Vpeak_all)
     IO.write_string_text(yfolder + "/ylabels_Vpeak", ["Vpeak"])
 
-    IO.write_float_text(yfolder + "/y_RMP", RMP_all)
-    IO.write_string_text(yfolder + "/ylabels_RMP", ["RMP"])
-
     # save time-dependent outputs dictionary
-    np.savetxt(yfolder + "/Vm.txt", Vm_all, fmt="%.2f")
     np.savetxt(yfolder + "/dVmdt.txt", dVmdt_all, fmt="%.2f")
 
     # If 0 < n_components < 1 and svd_solver == "full", select the number of components such that the amount of variance that needs to be explained is greater than the percentage specified by n_components.
-    qoi_dct = {"Vm": Vm_all, "dVmdt": dVmdt_all}
+    qoi_dct = {"dVmdt": dVmdt_all}
     for _, key in enumerate(qoi_dct):
         X_all = qoi_dct[key]
 
@@ -694,7 +763,7 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
                 + "_of_"
                 + str(np.size(Tl, 1))
                 + ".txt",
-                np.array(sv_l[l], ndmin=1, copy=False),
+                np.array(sv_l[l], ndmin=1),
                 fmt="%.4f",
             )
     return
