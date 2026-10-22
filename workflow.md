@@ -1,78 +1,101 @@
 # Workflow - Cicci_2027_CommsMed
 
 Status: all steps are updated and checked against the scripts. Nothing has been run end to end.
-Parts marked **[TO BE UPDATED]** wait for a decision (`2bis_check_imp.py` with `run_bench_pool.py`, requirements file).
+Parts marked **[TO BE UPDATED]** wait for the requirements file.
 
 ## General rules
 
 - Paths are set once in `config.py`: `CARP_INSTALL_DIR` (CARPentry folder) and `OUTPUT_DIR` (folder for all results).
 - All other settings are variables at the top of `main()` in each script.
-- Examples below use `basefolder = OUTPUT_DIR + "/KCL"` and `meshname = "KCL1"`.
-- **Paths are being checked script by script.** The paths in this workflow are those of the scripts tested so far: `0_single_cell.py`, `libGPE/gpe_training.py` and `libGPE/sensitivity_analysis.py`. The paths of the other scripts have not been checked yet.
-- Each script that reads samples must use the same `samplefolder` as the script that wrote them (for example `basefolder + "/samples_LHS"`).
+- Examples below use `basefolder = OUTPUT_DIR + "/<meshname>"`.
+- The pre-processing (step 1) creates `<meshname>_subendolayer`, `<meshname>_FEC` and `<meshname>_gregion` from the base mesh `<meshname>`.
+- In `3_sample_assembling_pool.py`, `meshname` is the base mesh name `<meshname>` (for example `KCL1`), never a derived mesh. The script adds `_subendolayer` and `_gregion` by itself. In `4_simulation_assembling.py` and `4bis_run_simulations.py`, `meshname` is the full name of the mesh used in the simulations (for example `KCL1_gregion`).
 
 ## Requirements
 
 - CARPentry release 2024 (academic licence), including meshtool and mguvc.
 - Python 3.12.7 and the packages listed in the README **[TO BE UPDATED: requirements file]**.
-- Torso mesh in `carp_txt` format in `OUTPUT_DIR + "/torsomesh"`, with the tag numbers set in `1_preprocessing.py`.
-- Electrode file `OUTPUT_DIR + "/electrodes/electrodes.pts"`:
-    - first line: number of points (10); then one line per electrode with x, y, z (same units as the mesh);
-    - order of the electrodes: V1, V2, V3, V4, V5, V6, RA, LA, RL, LL.
+- Torso mesh in `carp_txt` format, with the tag numbers set in `libEP/data/tag_HEART.json`.
+- Electrode pts-file(s) should be created ad-hoc with the following format:
+    - first line: number of points 
+        - for the 12-lead ECG: 10
+    - second line onwards: one line per electrode with x, y, z (same units as the mesh), in the correct order;
+        - for a 12-lead ECG: V1, V2, V3, V4, V5, V6, RA, LA, RL, LL
+    - NOTE: second-to-last electrode used as ground.
 - Optional: a file with local activation times (one value per node of the biventricular mesh) for the pre-pacing of the cells, given with the argument `prepacing_lats` of `setup.write_par_tissue`. Without it, no pre-pacing is applied.
 
-## 0. Single-cell model (ToRORd_dynCl) and its global sensitivity analysis
+## Part A - 0D: single-cell model
+
+The single-cell model (e.g., ToRORd_dynCl) and its global sensitivity analysis. This part does not depend on Part B.
+
+### 0. Single-cell model and its global sensitivity analysis
 
 This step is independent of the steps below.
 
-- **a.** Run `0_single_cell.py`. It samples the ionic model parameters, runs the single-cell simulations and writes the outputs in `OUTPUT_DIR + "/ToRORd_dynCl/qoi"`.
-- **b.** Run `libGPE/gpe_training.py` with `single_cell = True`. It trains the GPEs in `OUTPUT_DIR + "/ToRORd_dynCl/GPE_Matern_GL"`.
-- **c.** Run `libGPE/sensitivity_analysis.py`. It reads those GPEs and writes the Sobol indices and the figures in `OUTPUT_DIR + "/ToRORd_dynCl/GSA"`.
+- **a.** Run `0_single_cell.py` (set `num_proc`, the number of samples simulated at the same time). It samples the ionic model parameters (in `<basefolder>/samples`), runs the single-cell simulations and writes the outputs in `<basefolder>/qoi`.
+- **b.** Run `libGPE/gpe_training.py` with `single_cell = True`. It trains the GPEs in `<basefolder>/gpe/GPE_Matern_GL`.
+- **c.** Run `libGPE/sensitivity_analysis.py`. It reads those GPEs and writes the Sobol indices and the figures in `<basefolder>/gsa`.
 
-## 1. Generate meshes and UVCs
+---
 
-- **a.** Run `1_preprocessing.py`.
-- **b.** Convert the mesh to vtk format and check that everything is correct.
+## Part B - 3D: biventricular and torso model
 
-## 2. Compute PCA basis/bases
+The meshes, the simulations of the biventricular and torso model, the ECGs and the calibration.
+
+### 1. Pre-process meshes and generate UVCs
+
+- **a.** Set correct mesh tags in `libEP/data/tag_HEART.json` and `libEP/data/tag_BATH.json`
+- **b.** Run `1_preprocessing.py` for current mesh `<meshname>`
+    - the input mesh (in `carp_txt` format) is read from `OUTPUT_DIR + "/mesh/<meshname>"`
+    - all outputs will be saved in `OUTPUT_DIR + "/" + <meshname>`
+
+### 2. Compute PCA basis/bases
 
 - **a.** Run `2_sampling.py` with
-    - i. `paramfilename = "simulation_parameters"`
-    - ii. `labelfilename_scalar = "xlabels_scalar"`
-    - iii. `labelfilename_gradient = "xlabels_gradient"`
-    - iv. `rangefilename_scalar = "ranges_scalar"`
-    - v. `rangefilename_gradient = "ranges_gradient"`
-    - vi. `N_samples = 10 * ( len(xlabels_scalar) + 3*len(xlabels_gradient) )` (already set in the script)
-    - vii. `samplefolder = basefolder + "/samples_LHS"`
-- **b.** **[TO BE UPDATED]** Run `2bis_check_imp.py` in combination with `run_bench_pool.py` to check APD, VmMax and VmMin values for single cells.
-- **c.** Run `3_sample_assembling_pool.py` (set `samplefolder = basefolder + "/samples_LHS"`).
+    - `paramfilename = "simulation_parameters"`
+    - `labelfilename_scalar = "xlabels_scalar"`
+    - `labelfilename_gradient = "xlabels_gradient"`
+    - `rangefilename_scalar = "ranges_scalar"`
+    - `rangefilename_gradient = "ranges_gradient"`
+    - `N_samples = 10 * ( len(xlabels_scalar) + 3*len(xlabels_gradient) )`
+    - `samplefolder = basefolder + "/samples_LHS"`
+- **b.** Optional: a preliminary single-cell check of the samples, to discard samples that are highly likely to fail (APD, VmMax or VmMin outside a viable range). It needs CARPentry (`bench.pt`). Set `check_single_cell = True` (and `num_proc`) in `2_sampling.py` in step **a**. If the sample folder already exists, the script skips the sampling and runs only the check. The simulations already completed are not run again. The accepted samples are listed in `accepted_samples.txt` (the later steps skip the others), and the samples with a missing output in `missing_statistics.txt`. To run the check again, remove `accepted_samples.txt` first.
+- **c.** Run `3_sample_assembling_pool.py` with
+    - `labelfilename_scalar = "xlabels_scalar"`
+    - `samplefolder = basefolder + "/samples_LHS"`
+    - `SElayer = True`
+    - `heterogeneity = True`
+    - `labelfilename_im = "ToRORd_dynCl"`
 - **d.** Run `4_simulation_assembling.py` with
-    - i. `propagation = "RE+"`
-    - ii. `lonfolder_ref = ""`
-    - iii. `samplefolder = basefolder + "/samples_LHS"`
-    - iv. `clusterfolder = basefolder` for a local run, otherwise the path of the folder on the cluster
+    - `ionicmodelname = "ToRORd_dynCl"`
+    - `labelfilename_im = "ToRORd_dynCl"`
+    - `labelfilename_scalar = "xlabels_scalar"`
+    - `samplefolder = basefolder + "/samples_LHS"`
+    - `propagation = "RE+"`
+    - `clusterfolder = basefolder` for a local run, otherwise the absolute path of the folder on the cluster
+- **e.** Move or copy `basics/mesh` and `basics/data` (saved by step **d** in `basefolder + "/basics"`) and the samples folder of the current step (`<samplefolder>`) into `clusterfolder`. Run the simulations (lead field first, then EP) for every sample:
+    - locally: run `4bis_run_simulations.py` with 
+        - `samplefolder = basefolder + "/samples_LHS"`
+        - `simulationfolder = clusterfolder + "/simulations_LHS"`
+    - on a cluster: `clusterfolder` (step **d**) is the path on the cluster. Write your own job script with the `carp.pt` commands used in `4bis_run_simulations.py`. The folder with the samples keeps its name on the cluster.
+- **NOTE:** simulations whose `lead_field_egms.dat` is missing or empty are treated as "failed" and skipped by step **f**.
+- **f.** Run `5_extract_outputs_synthetic.py` with
+    - `paramfilename = "simulation_parameters"`
+    - `labelfilename_scalar = "xlabels_scalar"`
+    - `labelfilename_gradient = "xlabels_gradient"`
+    - `compute_PCA = True`
+    - for the QRS complex:
+        - `ECGsegment = "QRScomplex"` (sets `qoi_list = ["12leads_truncated"]`)
+        - `qoifolder = basefolder + "/PCAbasis_<meshname>_150ms_99%"`
+        - `tend_truncated = 150` ms
+    - for the T-wave:
+        - `ECGsegment = "Twave"` (sets `qoi_list = ["12leads_REP"]`)
+        - `qoifolder = basefolder + "/PCAbasis_<meshname>_REP_99%"`
+        - `tend = 500` ms
 
-  The bath tags are read from `data/tag_BATH.json`. The job scripts are not generated. See step e.
-- **e.** Run the simulations (lead field first, then EP) for every sample:
-    - locally: run `4bis_run_simulations.py` (set `mainfolder`, `samplefolder = basefolder + "/samples_LHS"`, `N_samples` and `num_proc`). The results are written in `mainfolder + "/simulations"` (variable `simresult`);
-    - on a cluster: copy the folders `mesh`, `data` and `samples_LHS` (from `basefolder`) to the cluster, set `clusterfolder` in step d to the path on the cluster, and write your own job script with the `carp.pt` commands used in `4bis_run_simulations.py`. The folder with the samples keeps its name on the cluster.
-- **f.** Download the results (the simulations folder), deleting unnecessary files.
-- **g.** Failed simulations: step h skips a simulation whose `lead_field_egms.dat` (the BSP file written by CARPentry) is missing or empty.
-- **h.** Run `5_extract_outputs_synthetic.py` with `paramfilename = "simulation_parameters"`, `labelfilename_scalar = "xlabels_scalar"` and `labelfilename_gradient = "xlabels_gradient"`, and
-    - i. for the QRS complex:
-        1. `ECGsegment = "QRScomplex"` (sets `qoi_list = ["12leads_truncated"]`)
-        2. `PCAbasisfolder = ""`
-        3. `qoifolder = basefolder + "/PCAbasis_KCL1_150ms_99%"`
-        4. `tend_truncated = 150` ms
-    - ii. for the T-wave:
-        1. `ECGsegment = "Twave"` (sets `qoi_list = ["12leads_REP"]`)
-        2. `PCAbasisfolder = ""`
-        3. `qoifolder = basefolder + "/PCAbasis_KCL1_REP_99%"`
-        4. `tend = 500` ms
+  The PCA basis is saved in `qoifolder`, which is named so that the later steps find it (with `compute_PCA = False`).
 
-Removed from the released pipeline: plotting of the ECGs and the screening of unfeasible simulations by total activation time (`sweep_ECG.py`, `accepted_samples`).
-
-## 3. Perform Local Sensitivity Analysis (LSA)
+### 3. Perform Local Sensitivity Analysis (LSA)
 
 - **a.** Run `linear_fitting_sampling.py` with
     - i. `paramfilename = "simulation_parameters_fitting_biv"`
@@ -92,7 +115,7 @@ Removed from the released pipeline: plotting of the ECGs and the screening of un
     - iv. `lonfolder_ref = ""`
 - **e.** Run the simulations and download the results (as in steps 2e and 2f), with
     - i. `samplefolder = basefolder + "/samples_fitting"` in `4bis_run_simulations.py`
-    - ii. `simresult = basefolder + "/simulations_fitting"` in `4bis_run_simulations.py`, so that the results of step 2 are not overwritten (simulation numbers start from 0 in every stage)
+    - ii. `simulationfolder = basefolder + "/simulations_fitting"` in `4bis_run_simulations.py`, so that the results of step 2 are not overwritten (simulation numbers start from 0 in every stage)
 - **f.** Run `5_extract_outputs_synthetic.py` with
     - i. `paramfilename = "simulation_parameters_fitting_biv"`, `labelfilename_scalar = "xlabels_fitting_biv"`, `labelfilename_gradient = ""`, `samplefolder = basefolder + "/samples_fitting"` and `simulationfolder = basefolder + "/simulations_fitting"`
     - ii. for the QRS complex:
@@ -117,7 +140,7 @@ Removed from the released pipeline: plotting of the ECGs and the screening of un
         3. `PCAbasisfolder = basefolder + "/PCAbasis_KCL1_REP_99%"`
         4. `qoifolder = basefolder + "/qoi_fitting_REP"`
 
-## 4. Generate a target from a simulation
+### 4. Generate a target from a simulation
 
 - **a.** Run `linear_fitting_sampling.py` with
     - i. `paramfilename = "simulation_parameters_fitting_biv"`
@@ -127,7 +150,7 @@ Removed from the released pipeline: plotting of the ECGs and the screening of un
 
   The number of samples is 2 * the number of parameters (the minimum and the maximum of each parameter). It is set in the script.
 - **b.** Run `3_sample_assembling_pool.py` and `4_simulation_assembling.py` (`propagation = "RE+"`), with `samplefolder = basefolder + "/target/samples"`.
-- **c.** Run the simulations and download the results, with `samplefolder = basefolder + "/target/samples"` and `simresult = basefolder + "/target/simulations_candidates"` in `4bis_run_simulations.py`.
+- **c.** Run the simulations and download the results, with `samplefolder = basefolder + "/target/samples"` and `simulationfolder = basefolder + "/target/simulations_candidates"` in `4bis_run_simulations.py`.
 - **d.** Choose the "best" ECG and rename it to be sample/simulation(s) "0" in the target folder, that is
     - i. `target/samples/0`
     - ii. `target/simulations/SIM_LF_0` and `target/simulations/SIM_EP_0` (taken from `simulations_candidates`)
@@ -151,7 +174,7 @@ Removed from the released pipeline: plotting of the ECGs and the screening of un
   The columns of the matrix X written by this script follow the alphabetical order of the labels. Since the provided label files are already in alphabetical order, no reordering of the labels is needed.
 - **g.** For each qoi (`ECGsegment = "QRScomplex"` and `"Twave"`), run `libGPE/gpe_training.py` with `train_gpes = False` to construct the data folder and `outputs.csv` directly in the target qoi folder (`OUTPUT_DIR + "/KCL1/target/qoi_<segment>"`, set by `target_folder` in the script). No GPE is trained and no copying is needed.
 
-## 5. Generate a target from a clinical 12-lead ECG
+### 5. Generate a target from a clinical 12-lead ECG
 
 - **a.** Prepare the clinical ECG as the text file `ECG_from_BSP.dat` with 13 columns: time, LI, LII, LIII, aVR, aVL, aVF, V1, V2, V3, V4, V5, V6. Time 0 must be the onset of the QRS complex. The sampling interval must be 2 ms, and the number of samples must equal that of the simulated ECGs (otherwise the projection on the PCA basis fails).
 - **b.** Copy `ECG_from_BSP.dat` into `basefolder + "/target"`.
@@ -167,132 +190,193 @@ Removed from the released pipeline: plotting of the ECGs and the screening of un
 - **f.** The labels must be in alphabetical order, as the columns of X in step 4f. The provided label files already are. (`reorder_labels.py`, used for this in the old workflow, is not part of this release.)
 - **g.** Copy the label file `xlabels_calibration_QRS.txt` (or `xlabels_calibration_Twave.txt`) to the data folder of the corresponding target qoi folder, and change the name into `xlabels.txt`. `history_matching.py` and `6_select_best_fit.py` read it from there.
 
-## Pipeline: QRS-complex calibration
+### Pipeline: QRS-complex calibration
 
-Settings checked against the scripts; the pipeline has not been run end to end.
+Here: `<history_matching>` = `basefolder + "/History_Matching/QRScomplex"`.
 
-Folders used below: `HM = basefolder + "/History_Matching/QRScomplex"`.
-The simulation results of each stage go in their own folder (variable `simresult` in `4bis_run_simulations.py` and variable `simulationfolder` in `5_extract_outputs_synthetic.py`), so that stages do not overwrite each other.
+In all the steps below, set `clusterfolder = <history_matching>`. The simulation results of each stage go in their own folder, so that stages do not overwrite each other.
 
-1. Create the folder `HM`.
-2. Run `2_sampling_calibration.py` with
-    - a. `basefolder = OUTPUT_DIR + "/KCL/History_Matching/QRScomplex"`
-    - b. `paramfilename = "simulation_parameters_fitting_biv"`
-    - c. `labelfilename = "xlabels_calibration_QRS"` (the file is provided in `libEP/data/xlabels`)
-    - d. `rangefilename = "ranges_fitting_biv"`
-    - e. `N_samples = len(xlabels) * 20` (already set in the script)
-    - f. `samplefolder = HM + "/samples_initial_space"`
+1. Run `2_sampling_calibration.py` with
+    - `hmfolder = <history_matching>`
+    - `paramfilename = "simulation_parameters_fitting_biv"`
+    - `labelfilename = "xlabels_calibration_QRS"`
+    - `rangefilename = "ranges_fitting_biv"`
+    - `N_samples = len(xlabels) * 20` (already set in the script)
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
 
-   If more samples are needed, run it a second time with `samplefolder = HM + "/samples_initial_space_additional"` and put the two sets together. The script copies the label files, including `xlabels_empty.txt` and `ToRORd_dynCl.txt`, into the sample folder.
-3. Run `3_sample_assembling_pool.py` with
-    - a. `labelfilename_scalar = "xlabels_calibration_QRS"`
-    - b. `labelfilename_im = "xlabels_empty"`
-    - c. `samplefolder = HM + "/samples_initial_space"`
-    - d. `heterogeneity = True`
-4. Run `4_simulation_assembling.py` with
-    - a. `ionicmodelname = "TT2"`
-    - b. `labelfilename_im = "xlabels_empty"`
-    - c. `labelfilename_scalar = "xlabels_calibration_QRS"`
-    - d. `samplefolder = HM + "/samples_initial_space"`
-    - e. `storagefolder = basefolder`
-    - f. `propagation = "RE-"`
-    - g. `hps_ref = False`
-    - h. `cvfolder_ref = ""`
-    - i. `lonfolder_ref = ""`
-5. Run the simulations (see step 2e of the first part, with `samplefolder = HM + "/samples_initial_space"` and `simresult = HM + "/simulations_initial_space"`). Before that, change `basefolder + "/data/pfile_BASE.par"` (copied there by `4_simulation_assembling.py`) as
-    - a. `dt = 25`
-    - b. `tend = 150`
-6. Download the results.
-7. Run `5_extract_outputs_synthetic.py` with
-    - a. `ECGsegment = "QRScomplex"` (`tend_truncated = 150`)
-    - b. `paramfilename = "simulation_parameters_fitting_biv"`
-    - c. `labelfilename_scalar = "xlabels_calibration_QRS"`
-    - d. `labelfilename_gradient = ""`
-    - e. `samplefolder = HM + "/samples_initial_space"`
-    - f. `simulationfolder = HM + "/simulations_initial_space"`
-    - g. `PCAbasisfolder = basefolder + "/PCAbasis_KCL1_150ms_99%"`
-    - h. `qoifolder = HM + "/qoi_initial_space"`
-8. Train the GPEs with `libGPE/gpe_training.py`, with
-    - a. `ECGsegment = "QRScomplex"`
-    - b. `waveno = 0` for the first training (initial space only). For the later waves, `waveno` = the last wave included in the training data. The script uses the data of `qoi_initial_space` and `qoi_wave_1` to `qoi_wave_<waveno>`, and writes the GPEs in `OUTPUT_DIR/KCL1/History_Matching/gpe/QRScomplex/initial_space` or `wave_<waveno>` (in a subfolder `GPE_Matern_GL`).
-9. Perform the history matching with `libGPE/history_matching.py` (`ECGsegment = "QRScomplex"`, `waveno = 1` for the first wave). Wave n uses the GPEs of wave n-1 (`initial_space` for wave 1). It writes `X_simul_<n>.txt`, `X_test_<n>.txt` and `wave_<n>.json` in `HM + "/output"`, and the figures in `HM + "/figures"`.
-10. Run `2_sampling_simul_bhm.py` with `waveno = n`. It writes the new samples in `HM + "/samples_wave_<n>"` and copies the label files into that folder.
-11. Repeat steps 3 to 10 (excluding the change of `pfile_BASE.par` in step 5) for each wave n, with
-    - a. `samplefolder = HM + "/samples_wave_<n>"` (steps 3, 4, 5 and 7)
-    - b. `simresult` and `simulationfolder` = `HM + "/simulations_wave_<n>"`
-    - c. `qoifolder = HM + "/qoi_wave_<n>"`
+   The script copies the label files, including `xlabels_empty.txt` and `ToRORd_dynCl.txt`, into the sample folder.
+
+   NOTE: `xlabels_calibration_QRS` must be defined based on the sensitivity analysis results.
+2. Run `3_sample_assembling_pool.py` with
+    - `labelfilename_scalar = "xlabels_calibration_QRS"`
+    - `labelfilename_im = "xlabels_empty"`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `SElayer = True`
+    - `heterogeneity = True`
+3. Run `4_simulation_assembling.py` with
+    - `ionicmodelname = "TT2"` (for the first waves; use `ToRORd_dynCl` in the last waves)
+    - `labelfilename_im = "xlabels_empty"`
+    - `labelfilename_scalar = "xlabels_calibration_QRS"`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `propagation = "RE-"`
+    - `hps_ref = False`
+    - `cvfolder_ref = ""`
+    - `lonfolder_ref = ""`
+    - `clusterfolder = <history_matching>`
+4. Move or copy `basics/mesh` and `basics/data` (saved by step 3 in `basefolder + "/basics"`) into `<history_matching>`. Then change `<history_matching> + "/data/pfile_BASE.par"` as
+    - `dt = 25`
+    - `tend = 150`
+5. Locally, run `4bis_run_simulations.py` with (on a cluster, see step 2e of Part B)
+    - `clusterfolder = <history_matching>`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `simulationfolder = <history_matching> + "/simulations_initial_space"`
+6. Run `5_extract_outputs_synthetic.py` with
+    - `ECGsegment = "QRScomplex"` (`tend_truncated = 150`)
+    - `paramfilename = "simulation_parameters_fitting_biv"`
+    - `labelfilename_scalar = "xlabels_calibration_QRS"`
+    - `labelfilename_gradient = ""`
+    - `compute_PCA = False` (the PCA basis computed in step 2f of Part B is read from `basefolder + "/PCAbasis_<meshname>_150ms_99%"`)
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `simulationfolder = <history_matching> + "/simulations_initial_space"`
+    - `qoifolder = <history_matching> + "/qoi_initial_space"`
+7. Train the GPEs with `libGPE/gpe_training.py`, with
+    - `ECGsegment = "QRScomplex"`
+    - `waveno = 0` for the first training (initial space only). For the later waves, `waveno` = the last wave included in the training data. The script uses the data of `qoi_initial_space` and `qoi_wave_1` to `qoi_wave_<waveno>`, and writes the GPEs in `<history_matching> + "/gpe/initial_space"` or `<history_matching> + "/gpe/wave_<waveno>"` (in a subfolder `GPE_Matern_GL`).
+8. Perform the history matching with `libGPE/history_matching.py` (`ECGsegment = "QRScomplex"`, `waveno = 1` for the first wave). Wave n uses the GPEs of wave n-1 (`initial_space` for wave 1). It writes `X_simul_<n>.txt`, `X_test_<n>.txt` and `wave_<n>.json` in `<history_matching> + "/output"`, and the figures in `<history_matching> + "/figures"`.
+9. Run `2_sampling_simul_bhm.py` with
+    - `hmfolder = <history_matching>`
+    - `waveno = n`
+    
+    It writes the new samples in `<history_matching> + "/samples_wave_<n>"` and copies the label files into that folder.
+
+10. Repeat steps 2 to 9 for each wave n, with
+    - `samplefolder = <history_matching> + "/samples_wave_<n>"` (steps 2, 3, 5 and 6)
+    - `simulationfolder = <history_matching> + "/simulations_wave_<n>"`
+    - `qoifolder = <history_matching> + "/qoi_wave_<n>"`
+    - no new copy of `basics` and no new change of `pfile_BASE.par` (step 4): `mesh` and `data` are already in `<history_matching>`
+
+    and then `gpe_training.py` with `waveno = n` and `history_matching.py` with `waveno = n + 1`.
+
+Notes:
+
+- Remember that `gpe_training.py` adds the new qoi folder when `waveno` is increased.
+- For the last wave of the history matching, use `n_simuls_factor = 100` in `history_matching.py` (the number of new samples is then `len(xlabels) * 100`).
+
+When the history matching is finished, select the best-fit point with `6_select_best_fit.py` (see step 1 of the T-wave calibration).
+
+### Pipeline: T-wave calibration
+
+Here: `<history_matching>` = `basefolder + "/History_Matching/Twave"`.
+
+In all the steps below, set `clusterfolder = <history_matching>`. The simulation results of each stage go in their own folder, so that stages do not overwrite each other.
+
+1. Create the folder `<history_matching>`.
+2. Define the parameter file `data/simulation_parameters_fitting_biv_best-fit_QRS.json`: a copy of `data/simulation_parameters_fitting_biv.json` in which the values of the parameters listed in `xlabels_calibration_QRS.txt` are replaced by their best-fit values from the QRS-complex calibration (a point chosen among the non-implausible points of the last history matching wave). It is easier to use one of the parameter files from the QRS-complex waves and just change the last few lines.
+
+   Select the best-fit point (smallest RMSE between the emulated and the target ECG) with `6_select_best_fit.py`, with
+    - `ECGsegment = "QRScomplex"`
+    - `final_waveno` = the last wave of the history matching
+    - `K = 100`
+
+   It writes `best_NIMP_wave_<n>.json` in the output folder of the QRS-complex history matching.
+3. Run `2_sampling_calibration.py` with
+    - `hmfolder = <history_matching>`
+    - `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
+    - `labelfilename = "xlabels_calibration_Twave"` (the file is provided in `libEP/data/xlabels`)
+    - `rangefilename = "ranges_fitting_biv"`
+    - `N_samples = len(xlabels) * 20` (already set in the script)
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `check_single_cell = True` (single-cell check, see step 4) and `num_proc` (number of samples simulated at the same time)
+
+   The script copies the label files, including `xlabels_empty.txt` and `ToRORd_dynCl.txt`, into the sample folder.
+4. The single-cell check of the samples is run in step 3 with `check_single_cell = True` (T-wave calibration only). Look at `samples_initial_space/missing_statistics.txt` (if any). To resume after a failure, remove `accepted_samples.txt` and run `2_sampling_calibration.py` again with the same settings: the sampling is skipped and the simulations already completed are not run again.
+
+5. **[OPTIONAL]** Define a sample folder for the calibrated QRS-complex parameters, to compute HPS, conduction velocities, fibres and lead field only once, and save it to `<history_matching> + "/ref_QRS"`.
+    - Make the directory `<history_matching> + "/ref_QRS/0"`
+    - Copy `simulation_parameters_fitting_biv_best-fit_QRS.json` to `<history_matching> + "/ref_QRS/0/param.json"`
+    - Copy `xlabels_calibration_QRS.txt` (needed to compute fibres, CVs and HPS), `xlabels_empty.txt` and `ToRORd_dynCl.txt` to `<history_matching> + "/ref_QRS"`
+    - Run `3_sample_assembling_pool.py` with
+        - `labelfilename_scalar = "xlabels_calibration_QRS"`
+        - `labelfilename_im = "xlabels_empty"`
+        - `samplefolder = <history_matching> + "/ref_QRS"`
+        - `SElayer = True`
+        - `heterogeneity = True`
+    - Run `4_simulation_assembling.py` with
+        - `ionicmodelname = "ToRORd_dynCl"`
+        - `labelfilename_im = "xlabels_empty"`
+        - `labelfilename_scalar = "xlabels_calibration_QRS"`
+        - `samplefolder = <history_matching> + "/ref_QRS"`
+        - `propagation = "RE-"`
+        - `hps_ref = False`
+        - `cvfolder_ref = ""`
+        - `lonfolder_ref = ""`
+        - `clusterfolder = <history_matching>`
+    - Move or copy `basics/mesh` and `basics/data` (saved by the run of `4_simulation_assembling.py` above in `basefolder + "/basics"`) into `<history_matching>`.
+    - Compute the lead field of the reference folder: run `4bis_run_simulations.py` locally (on a cluster, see step 2e of Part B) with
+        - `clusterfolder = <history_matching>`
+        - `samplefolder = <history_matching> + "/ref_QRS"`
+        - `simulationfolder = <history_matching> + "/simulations_ref_QRS"`
+
+        The folder has only the sample 0. The EP simulation is also run and can be ignored. 
+    - Rename `<history_matching> + "/simulations_ref_QRS/SIM_LF_0"` as `<history_matching> + "/ref_QRS/SIM_LF_ref"`.
+6. Run `3_sample_assembling_pool.py` with
+    - `labelfilename_scalar = "xlabels_calibration_Twave"`
+    - `labelfilename_im = "ToRORd_dynCl"`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `SElayer = True`
+    - `heterogeneity = True`
+
+   Compute ONLY the ADJ files (HPS, CVs and fibres can be computed only once and then referenced to `ref_QRS`).
+
+7. Run `4_simulation_assembling.py` with
+    - `ionicmodelname = "ToRORd_dynCl"`
+    - `labelfilename_im = "ToRORd_dynCl"`
+    - `labelfilename_scalar = "xlabels_calibration_Twave"`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `propagation = "RE+"`
+    - `hps_ref = True` (if that is the case)
+    - `cvfolder_ref = <history_matching> + "/ref_QRS/0/CV"` (if that is the case)
+    - `lonfolder_ref = <history_matching> + "/ref_QRS/0"` (if that is the case)
+    - `clusterfolder = <history_matching>`
+
+   Move or copy `basics/mesh` and `basics/data` (saved by this step in `basefolder + "/basics"`) into `<history_matching>`, unless this was already done in step 5. Then check that `<history_matching> + "/data/pfile_BASE.par"` has `dt = 5` and `tend = 500`.
+
+8. Locally, run `4bis_run_simulations.py` with (on a cluster, see step 2e of Part B)
+    - `clusterfolder = <history_matching>`
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `simulationfolder = <history_matching> + "/simulations_initial_space"`
+9. Run `5_extract_outputs_synthetic.py` with
+    - `ECGsegment = "Twave"` (`tend = 500`)
+    - `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
+    - `labelfilename_scalar = "xlabels_calibration_Twave"`
+    - `labelfilename_gradient = ""`
+    - `compute_PCA = False` (the PCA basis computed in step **2f** of Part B is read from `basefolder + "/PCAbasis_<meshname>_REP_99%"`)
+    - `samplefolder = <history_matching> + "/samples_initial_space"`
+    - `simulationfolder = <history_matching> + "/simulations_initial_space"`
+    - `qoifolder = <history_matching> + "/qoi_initial_space"`
+10. Train the GPEs with `libGPE/gpe_training.py`, with
+    - `ECGsegment = "Twave"`
+    - `waveno = 0` for the first training (initial space only). For the later waves, `waveno` = the last wave included in the training data (see step 7 of the QRS-complex calibration).
+11. Perform the history matching with `libGPE/history_matching.py` (`ECGsegment = "Twave"`, `waveno = 1` for the first wave). It writes its files in `<history_matching> + "/output"` and `<history_matching> + "/figures"`, as in step 8 of the QRS-complex calibration.
+12. Run `2_sampling_simul_bhm.py` with
+    - `hmfolder = <history_matching>`
+    - `waveno = n`
+    - `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
+    - `labelfilename = "xlabels_calibration_Twave"`
+
+    It writes the new samples in `<history_matching> + "/samples_wave_<n>"` and copies the label files into that folder.
+
+13. Repeat steps 6 to 12 for each wave n, with
+    - `samplefolder = <history_matching> + "/samples_wave_<n>"` (steps 6, 7, 8 and 9)
+    - `simulationfolder = <history_matching> + "/simulations_wave_<n>"`
+    - `qoifolder = <history_matching> + "/qoi_wave_<n>"`
+    - no new copy of `basics` (step 7): `mesh` and `data` are already in `<history_matching>`
 
    and then `gpe_training.py` with `waveno = n` and `history_matching.py` with `waveno = n + 1`.
 
 Notes:
 
 - Remember that `gpe_training.py` adds the new qoi folder when `waveno` is increased.
-- In the last waves, use `ionicmodelname = "ToRORd_dynCl"` in step 4 **[TO BE CONFIRMED: also `labelfilename_im = "ToRORd_dynCl"` in steps 3 and 4]**.
-- For the last wave of the history matching, use `n_simuls_factor = 100` in `history_matching.py` (the number of new samples is then `len(xlabels) * 100`).
+- For the last wave of the history matching, use `n_simuls_factor = 100` in `history_matching.py`.
 
-When the history matching is finished, select the best-fit point with `6_select_best_fit.py` (see the T-wave calibration, step 2).
-
-## Pipeline: T-wave calibration
-
-Settings checked against the scripts; the pipeline has not been run end to end.
-
-Folders used below: `HM = basefolder + "/History_Matching/Twave"`.
-
-1. Create the folder `HM`.
-2. Define the parameter file `data/simulation_parameters_fitting_biv_best-fit_QRS.json`: a copy of `data/simulation_parameters_fitting_biv.json` in which the values of the parameters listed in `xlabels_calibration_QRS.txt` are replaced by their best-fit values from the QRS-complex calibration (a point chosen among the non-implausible points of the last history matching wave).
-   It is easier to use one of the parameter files from the HM waves and just change the last few lines.
-   Select the best-fit point (smallest RMSE between the emulated and the target ECG) with `6_select_best_fit.py`, with
-    - i. `K = 100`
-    - ii. `ECGsegment = "QRScomplex"`, `final_waveno` = the last wave of the history matching
-
-   It writes `best_NIMP_wave_<n>.json` in the output folder of the history matching.
-3. Run `2_sampling_calibration.py` with
-    - a. `basefolder = OUTPUT_DIR + "/KCL/History_Matching/Twave"`
-    - b. `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
-    - c. `labelfilename = "xlabels_calibration_Twave"` (the file is provided in `libEP/data/xlabels`)
-    - d. `N_samples = len(xlabels) * 20` (already set in the script)
-    - e. `samplefolder = HM + "/samples_initial_space"`
-4. Define a sample folder for the calibrated QRS-complex parameters to compute fibres and lead field only once. It must be next to the sample folders (`HM + "/ref_QRS"`), because the scripts look for it there.
-    - a. Make the directory `HM + "/ref_QRS/0"`
-    - b. Copy `simulation_parameters_fitting_biv_best-fit_QRS.json` to `HM + "/ref_QRS/0/param.json"`
-    - c. Copy `xlabels_calibration_QRS.txt` (needed to compute fibres, CVs and HPS) and `ToRORd_dynCl.txt` to `HM + "/ref_QRS"`
-    - d. Run `3_sample_assembling_pool.py` with
-        1. `labelfilename_scalar = "xlabels_calibration_QRS"`
-        2. `samplefolder = HM + "/ref_QRS"`
-    - e. Run `4_simulation_assembling.py` with
-        1. `labelfilename_scalar = "xlabels_calibration_QRS"`
-        2. `samplefolder = HM + "/ref_QRS"`
-    - f. Compute the lead field for this folder: run `4bis_run_simulations.py` with `N_samples = 1`, `samplefolder = HM + "/ref_QRS"` and `simresult = HM + "/simulations_ref_QRS"` (the EP simulation is also run and can be ignored)
-    - g. Rename `HM + "/simulations_ref_QRS/SIM_LF_0"` as `HM + "/ref_QRS/SIM_LF_ref"`
-5. **[TO BE UPDATED]** Run `2bis_check_imp.py` (in combination with `run_bench_pool.py`).
-6. Run `3_sample_assembling_pool.py` with
-    - a. `labelfilename_im = "ToRORd_dynCl"`
-    - b. `labelfilename_scalar = "xlabels_calibration_Twave"`
-    - c. `samplefolder = HM + "/samples_initial_space"`
-
-   Compute ONLY the ADJ files (HPS, CVs and fibres can be computed only once and then referenced to `ref_QRS`).
-7. Run `4_simulation_assembling.py` with
-    - a. `labelfilename_im = "ToRORd_dynCl"`
-    - b. `labelfilename_scalar = "xlabels_calibration_Twave"`
-    - c. `samplefolder = HM + "/samples_initial_space"`
-    - d. `propagation = "RE+"`
-    - e. `hps_ref = True` (if that is the case)
-    - f. `cvfolder_ref = HM + "/ref_QRS/0/CV"` (if that is the case)
-    - g. `lonfolder_ref = HM + "/ref_QRS/0"` (if that is the case)
-8. Run the simulations (see step 2e of the first part, with `simresult = HM + "/simulations_initial_space"`) and download the results. Check first that `basefolder + "/data/pfile_BASE.par"` has `dt = 5` and `tend = 500` (the QRS-complex calibration changes them).
-9. Run `5_extract_outputs_synthetic.py` with
-    - a. `ECGsegment = "Twave"` (`tend = 500`)
-    - b. `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
-    - c. `labelfilename_scalar = "xlabels_calibration_Twave"`
-    - d. `labelfilename_gradient = ""`
-    - e. `samplefolder = HM + "/samples_initial_space"`
-    - f. `simulationfolder = HM + "/simulations_initial_space"`
-    - g. `PCAbasisfolder = basefolder + "/PCAbasis_KCL1_REP_99%"`
-    - h. `qoifolder = HM + "/qoi_initial_space"`
-10. Train the GPEs with `libGPE/gpe_training.py`, with `ECGsegment = "Twave"` and `waveno` as in step 8 of the QRS-complex calibration.
-11. Perform the history matching with `libGPE/history_matching.py` (`ECGsegment = "Twave"`).
-12. Run `2_sampling_simul_bhm.py` with
-    - a. `basefolder = OUTPUT_DIR + "/KCL/History_Matching/Twave"`
-    - b. `paramfilename = "simulation_parameters_fitting_biv_best-fit_QRS"`
-    - c. `labelfilename = "xlabels_calibration_Twave"`
-13. Repeat from step 6 for each wave (with `samplefolder = HM + "/samples_wave_<n>"`, and the simulation and qoi folders of the wave, as in step 11 of the QRS-complex calibration).
+When the history matching is finished, select the best-fit point with `6_select_best_fit.py` (`ECGsegment = "Twave"`, `final_waveno` = the last wave).

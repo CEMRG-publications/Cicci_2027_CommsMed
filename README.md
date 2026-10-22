@@ -68,7 +68,7 @@ Strocchi M, Longobardi S, Augustin CM, Gsell MAF, Petras A, Rinaldi CA, Vigmond 
 2. Open `config.py` and set
    - `CARP_INSTALL_DIR`: the folder where CARPentry is installed (it must contain `bin/carp.pt`, `meshtool/meshtool` and `carputils`);
    - `OUTPUT_DIR`: the folder where all results are written.
-   Each script stops with a clear message if a path is not set.
+   Each script stops with a clear message if a path is not set. Use absolute paths. A relative path is taken relative to the folder of `config.py`, not to the folder you launch the script from.
 3. All other settings are variables at the top of `main()` in each script. Edit them there, as described in `workflow.md`.
 
 The scripts write all results under `OUTPUT_DIR`. Most of them use the subfolder `OUTPUT_DIR/KCL` and the mesh name `KCL1`. These are names for the case used in the paper, and you can change them.
@@ -77,7 +77,7 @@ The scripts write all results under `OUTPUT_DIR`. Most of them use the subfolder
 
 Patient-derived data are not released. You must supply:
 
-1. **Torso mesh**, in `carp_txt` format, in `OUTPUT_DIR/torsomesh`. The tag numbers of the regions are set in `libEP/1_preprocessing.py`.
+1. **Torso mesh**, in `carp_txt` format, in `OUTPUT_DIR/mesh`. The tag numbers of the regions, and the settings used to segment the myocardium, are set in `libEP/data/tag_HEART.json` (the bath tags are in `libEP/data/tag_BATH.json`).
 2. **Electrodes**, in `OUTPUT_DIR/electrodes/electrodes.pts`. First line: the number of points (10). Then one line per electrode with x, y and z, in the same units as the mesh. Order: V1, V2, V3, V4, V5, V6, RA, LA, RL, LL.
 3. **Clinical ECG** (only if the target is a clinical ECG): the text file `ECG_from_BSP.dat`, in `OUTPUT_DIR/KCL/target`.
    - 13 columns: time, LI, LII, LIII, aVR, aVL, aVF, V1, V2, V3, V4, V5, V6.
