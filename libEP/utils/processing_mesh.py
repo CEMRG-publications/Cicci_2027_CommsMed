@@ -19,6 +19,255 @@ import shutil
 import copy
 
 
+# --- HEART TAGS --- #
+def fec_layers(Z_FEC_min=0.50, Z_FEC_max=0.75, deltaZ_FEC=0.02):
+    """Apico-basal extension (in %) at which each fast endocardial conductive layer starts, as tagged in compute_FEC_layers.
+
+    Parameters
+    ----------
+    Z_FEC_min: float
+        Lower bound for fast endocardial conductive layer extension. Must be a multiple of 0.01. Default: 0.50.
+    Z_FEC_max: float
+        Upper bound for fast endocardial conductive layer extension. Must be a multiple of 0.01. Default: 0.75.
+    deltaZ_FEC: float
+        Extension of each fast endocardial conductive layer. Must be a multiple of 0.01. Default: 0.02.
+    """
+
+    values = [100 * Z_FEC_min, 100 * Z_FEC_max, 100 * deltaZ_FEC]
+    if any(abs(v - round(v)) > 1e-6 for v in values):
+        raise Exception(
+            "Z_FEC_min, Z_FEC_max and deltaZ_FEC must be multiples of 0.01 (given: {}, {}, {}).".format(
+                Z_FEC_min, Z_FEC_max, deltaZ_FEC
+            )
+        )
+    if round(values[2]) < 1:
+        raise Exception("deltaZ_FEC must be at least 0.01.")
+
+    return list(range(round(values[0]), round(values[1]) + 1, round(values[2])))
+
+
+def _derive_tag_sets(base, par, layers):
+    """Tags of the segments and of the fast endocardial conductive layers, derived from the base tags and the construction parameters (see segment_submesh and compute_FEC_layers)."""
+
+    factor_myo = par["factor_tag_myo"]
+    factor_SE = par["factor_tag_SE"]
+    factor_FEC = par["factor_tag_FEC"]
+    Nz = par["Nz"]
+
+    sets = {"myo_segments": {}, "SE_segments": {}, "FEC_tags": {}, "FEC_segments": {}}
+    for name, Nrho in (("RVmyo", par["Nrho_RV"]), ("LVmyo", par["Nrho_LV"])):
+        sets["myo_segments"][name] = [
+            factor_myo * int(base[name]) + k for k in range(1, Nz * Nrho + 1)
+        ]
+    for name in ("SE_RV", "SE_LV", "SE_septRV"):
+        b = int(base[name])
+        sets["SE_segments"][name] = [factor_SE * b + z for z in range(1, Nz + 1)]
+        sets["FEC_tags"][name] = [factor_FEC * b + layer for layer in layers]
+        sets["FEC_segments"][name] = [
+            factor_SE * t + z for t in sets["FEC_tags"][name] for z in range(1, Nz + 1)
+        ]
+
+    return sets
+
+
+def get_heart_tags(tagfile, tagbathfile=""):
+    """Read the mesh tags and the construction parameters of the regions from a .json file, derive the tags of all the regions, and check that they do not clash.
+
+    Parameters
+    ----------
+    tagfile: str
+        Path to .json file with the tags of the input mesh ("base") and the parameters used to segment the biventricle ("construction"), without extension.
+    tagbathfile: str
+        Path to .json file with the tags of the bath regions, without extension. If given, the tags of the regions are checked against them too. Default: "".
+
+    Returns
+    -------
+    tags: dict
+        Comma-separated tags (as strings) with keys
+        - "RVmyo", "LVmyo", "SE_RV", "SE_LV", "SE_septRV", "RVbp", "LVbp", "upper_RH", "upper_LH": tags in the input mesh;
+        - "RVmyo_subendolayer", "LVmyo_subendolayer", "SE_RV_subendolayer", "SE_LV_subendolayer", "SE_septRV_subendolayer": tags in the sub-endocardial layer mesh (<meshname>_subendolayer);
+        - "RVmyo_FEC", "LVmyo_FEC": myocardium tags in the mesh with the fast endocardial conductive layers (<meshname>_FEC);
+        - "SE_RV_FEC", "SE_LV_FEC", "SE_septRV_FEC": sub-endocardial layer tag, plus the tags of the fast endocardial conductive layers (as given by compute_FEC_layers; tags in the mesh <meshname>_FEC, input of segment_biventricle);
+        - "RVmyo_gregion", "LVmyo_gregion": myocardium tag, plus the tags of its segments in the segmented mesh;
+        - "SE_RV_gregion", "SE_LV_gregion", "SE_septRV_gregion": sub-endocardial layer tag, plus the tags of its segments and the tags of the segments of the fast endocardial conductive layers in the segmented mesh.
+    par: dict
+        Construction parameters, as in the .json file.
+    """
+
+    data = IO.read_json(tagfile)
+    base = data["base"]
+    par = data["construction"]
+
+    # factors and numbers of regions must be integers (otherwise tags would be written as e.g. 3401.0). Floats with an integer value (e.g., 1e2, 100.0) are converted
+    for key in ("factor_tag_myo", "factor_tag_SE", "factor_tag_FEC", "Nz", "Nrho_LV", "Nrho_RV"):
+        value = par[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value != int(value):
+            raise Exception(
+                "'{}' in {} must be an integer (given: {}).".format(key, tagfile, value)
+            )
+        par[key] = int(value)
+
+    factor_myo = par["factor_tag_myo"]
+    factor_SE = par["factor_tag_SE"]
+    factor_FEC = par["factor_tag_FEC"]
+    Nz = par["Nz"]
+    layers = fec_layers(par["Z_FEC_min"], par["Z_FEC_max"], par["deltaZ_FEC"])
+
+    # setup.write_par_gregion reads the layer number from the digits 3 and 4 of the tag: this works only with the factor 100 and layers with two digits
+    if (factor_myo, factor_SE, factor_FEC) != (100, 100, 100) or layers[0] < 10 or layers[-1] > 99:
+        raise Exception(
+            "Tags in {} are not supported: factor_tag_myo, factor_tag_SE and factor_tag_FEC must be 100 and the fast layers (100 * Z_FEC_min to 100 * Z_FEC_max) must have two digits (10 to 99), "
+            "because setup.write_par_gregion reads the layer number from the digits 3 and 4 of the tag (given: factors {}, {}, {}; layers {} to {}).".format(
+                tagfile, factor_myo, factor_SE, factor_FEC, layers[0], layers[-1]
+            )
+        )
+
+    # tags are integers
+    for key in base:
+        for t in base[key].split(","):
+            if not t.strip().isdigit():
+                raise Exception("Tag '{}' of '{}' in {} is not a positive integer.".format(t, key, tagfile))
+
+    # tags of the segments: see segment_submesh
+    sets = _derive_tag_sets(base, par, layers)
+
+    def to_str(lst):
+        return ",".join([str(t) for t in lst])
+
+    tags = dict(base)
+    families = {}
+    for name in ("RVmyo", "LVmyo"):
+        segments = sets["myo_segments"][name]
+        tags[name + "_subendolayer"] = base[name]
+        tags[name + "_FEC"] = base[name]
+        tags[name + "_gregion"] = to_str([base[name]] + segments)
+        families[name] = [int(base[name])] + segments
+    for name in ("SE_RV", "SE_LV", "SE_septRV"):
+        b = base[name]
+        tags[name + "_subendolayer"] = b
+        tags[name + "_FEC"] = to_str([b] + sets["FEC_tags"][name])
+        tags[name + "_gregion"] = to_str(
+            [b] + sets["SE_segments"][name] + sets["FEC_segments"][name]
+        )
+        families[name] = (
+            [int(b)]
+            + sets["SE_segments"][name]
+            + sets["FEC_tags"][name]
+            + sets["FEC_segments"][name]
+        )
+
+    # checks
+    if par["Nrho_RV"] > 5 or par["Nrho_LV"] > 5:
+        raise Exception("Nrho_RV and Nrho_LV must be at most 5.")
+    if par["Nz"] > 10:
+        raise Exception("Nz must be at most 10.")
+    problems = []
+    if Nz * max(par["Nrho_RV"], par["Nrho_LV"]) >= factor_myo:
+        problems.append(
+            "Nz * Nrho ({}) must be smaller than factor_tag_myo ({}).".format(
+                Nz * max(par["Nrho_RV"], par["Nrho_LV"]), factor_myo
+            )
+        )
+    if Nz >= factor_SE:
+        problems.append("Nz ({}) must be smaller than factor_tag_SE ({}).".format(Nz, factor_SE))
+    if layers[-1] >= factor_FEC:
+        problems.append(
+            "The last fast layer ({}) must be smaller than factor_tag_FEC ({}).".format(layers[-1], factor_FEC)
+        )
+
+    # tags of the regions must be different from each other, and from the tags of the other regions of the input mesh
+    owner = {}
+    for name, lst in families.items():
+        for t in lst:
+            owner.setdefault(t, []).append(name)
+    others = {name: base[name] for name in ("RVbp", "LVbp", "upper_RH", "upper_LH")}
+    if tagbathfile:
+        bath = IO.read_json(tagbathfile)
+        for name in bath:
+            others["bath/" + name] = ",".join(bath[name])
+    for name, lst in others.items():
+        for t in lst.split(","):
+            if t.strip().isdigit() and int(t) in owner:
+                owner[int(t)].append(name)
+    for t in sorted(owner):
+        if len(owner[t]) > 1:
+            problems.append("Tag {} is used by {}.".format(t, " and ".join(owner[t])))
+    if problems:
+        raise Exception(
+            "Tags in {} are not valid:\n".format(tagfile) + "\n".join(problems[:20])
+        )
+
+    return tags, par
+
+
+def get_myocardium_tags(tags_in_mesh, Zmax_SE, tagfile):
+    """Tags (among the tags of a mesh) of ordinary myocardium, i.e., not of the fast endocardial conductive layer, for a given extension of the fast layer.
+
+    Myocardium tags (as in the input mesh, and their segments) are myocardium. Sub-endocardial layer tags (and their segments) are fast layer.
+    Tags of the fast endocardial conductive layers (and their segments) are fast layer if their layer (in % of the apico-basal extension) is not above 100 * Zmax_SE, otherwise they are myocardium.
+
+    Parameters
+    ----------
+    tags_in_mesh: list
+        Tags (integers) present in the mesh.
+    Zmax_SE: float
+        Extension in the apico-basal direction of the fast subendocardial layer. Must be in (0,1].
+    tagfile: str
+        Path to .json file with the tags of the input mesh ("base") and the parameters used to segment the biventricle ("construction"), without extension.
+    """
+
+    tags, par = get_heart_tags(tagfile)
+    layers = fec_layers(par["Z_FEC_min"], par["Z_FEC_max"], par["deltaZ_FEC"])
+    sets = _derive_tag_sets(tags, par, layers)
+
+    myo = set()
+    for name in ("RVmyo", "LVmyo"):
+        myo.update([int(tags[name])] + sets["myo_segments"][name])
+    SE = set()
+    layer_of = {}
+    for name in ("SE_RV", "SE_LV", "SE_septRV"):
+        SE.update([int(tags[name])] + sets["SE_segments"][name])
+        for layer, t in zip(layers, sets["FEC_tags"][name]):
+            layer_of[t] = layer
+            for z in range(1, par["Nz"] + 1):
+                layer_of[par["factor_tag_SE"] * t + z] = layer
+
+    unknown = [t for t in tags_in_mesh if t not in myo and t not in SE and t not in layer_of]
+    if unknown:
+        raise Exception(
+            "Tags {} of the mesh are not in {}. Update the file.".format(unknown[:20], tagfile)
+        )
+
+    return [t for t in tags_in_mesh if t in myo or (t in layer_of and layer_of[t] > 100 * Zmax_SE)]
+
+
+def count_heart_regions(meshfolder, meshname, tags, max_regions=256):
+    """Print the number of different myocardial region tags of a segmented mesh, and warn if it is larger than the maximum number of regions allowed by CARPentry.
+
+    Parameters
+    ----------
+    meshfolder: str
+        Path to the computational mesh.
+    meshname: str
+        Name of the segmented mesh.
+    tags: dict
+        Tags of the regions, as returned by get_heart_tags.
+    max_regions: int
+        Maximum number of regions allowed by CARPentry. Default: 256.
+    """
+
+    elem = IO.read_elem(meshfolder + "/" + meshname)
+    heart = set()
+    for name in ("RVmyo", "LVmyo", "SE_RV", "SE_LV", "SE_septRV"):
+        heart.update([int(t) for t in tags[name + "_gregion"].split(",")])
+    n_regions = len(heart.intersection(set(elem[5].unique())))
+    print("Mesh {} has {} different myocardial region tags.".format(meshname, n_regions))
+    if n_regions > max_regions:
+        print(
+            "WARNING: CARPentry does not allow more than {} different regions.".format(max_regions)
+        )
+
+    return n_regions
 
 
 def extract_biv_surf(
@@ -814,7 +1063,7 @@ def extract_SElayer(
     idxseptRV = np.where(elem_SE[5] == int(_SE_septRV))[0]
 
     # set tags of layers such that Z > Zmax_SE back to the corresponding myocardial tags
-    subindexall = np.where(100 * Z_SElayer > int(100 * Zmax_SE))[0]
+    subindexall = np.where(100 * Z_SElayer > round(100 * Zmax_SE))[0]
     subSElayer = elem_SE[[1, 2, 3, 4]].map(lambda x: x in subindexall)
     subSE_RVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxRV)
     subSE_LVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxLV)
@@ -857,7 +1106,7 @@ def compute_FEC_layers(
     _SE_RV="44",
     _SE_LV="45",
     _SE_septRV="46",
-    factor_tag_FEC=1e2,
+    factor_tag_FEC=100,
     Z_FEC_min=0.50,
     Z_FEC_max=0.75,
     deltaZ_FEC=0.02,
@@ -892,7 +1141,7 @@ def compute_FEC_layers(
     _SE_septRV: str
         Pre-existing tag for septal subendocardial layer on the right side. Default: "46".
     factor_tag_FEC: int
-        Multiplicative factor for fast endocardial conductive layers with respect corresponding subendocardial layer tag. Default: 1e2.
+        Multiplicative factor for fast endocardial conductive layers with respect corresponding subendocardial layer tag. Default: 100.
     Z_FEC_min: float
         Lower bound for fast endocardial conductive layer extension. Must be in [0,1]. Default: 0.50.
     Z_FEC_max: float
@@ -965,7 +1214,7 @@ def compute_FEC_layers(
     Z_SElayer = np.genfromtxt(uvcfolder + "/Z_subendocardium_SE.dat")
 
     # set tags of layers such that Z > Zmax_SE back to the corresponding myocardial tags
-    subindexall = np.where(100 * Z_SElayer > int(100 * Z_FEC_max))[0]
+    subindexall = np.where(100 * Z_SElayer > round(100 * Z_FEC_max))[0]
     subSElayer = elem_SE[[1, 2, 3, 4]].map(lambda x: x in subindexall)
     subSE_RVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxRV)
     subSE_LVidx = np.intersect1d(np.where(subSElayer.any(axis=1).map(int) == 1), idxLV)
@@ -977,9 +1226,8 @@ def compute_FEC_layers(
     elem_SE.loc[subSE_septRVidx, 5] = _LVmyo
 
     # define multiple SE layers
-    layer = int(100 * Z_FEC_min)
     print("Tagging multiple FEC layers...")
-    while layer <= int(100 * Z_FEC_max):
+    for layer in fec_layers(Z_FEC_min, Z_FEC_max, deltaZ_FEC):
         print("... {}% apico-basal extension".format(layer))
         subindexall = np.intersect1d(
             np.where(100 * Z_SElayer >= layer),
@@ -998,7 +1246,6 @@ def compute_FEC_layers(
         elem_SE.loc[subSE_RVidx, 5] = str(factor_tag_FEC * int(_SE_RV) + layer)
         elem_SE.loc[subSE_LVidx, 5] = str(factor_tag_FEC * int(_SE_LV) + layer)
         elem_SE.loc[subSE_septRVidx, 5] = str(factor_tag_FEC * int(_SE_septRV) + layer)
-        layer = int(layer + 100 * deltaZ_FEC)
     IO.write_elem(finalmesh_i_SE, elem_SE)
 
     # insert submeshes
@@ -1035,7 +1282,6 @@ def segment_submesh(
     factor_tag_SE,
     Nz,
     Nrho,
-    _submsh_FEC="",
 ):
     """Segment biventricular submesh (e.g., RV, LV) into different regions along apico-basal and tranmural direction.
 
@@ -1067,17 +1313,13 @@ def segment_submesh(
         Number of regions along the apico-basal direction.
     Nrho : int
         Number of regions along the transmural direction.
-    _submsh_FEC : str
-        Pre-existing tag(s) for the fast endocardial conductive layers of the submesh. These elements are extracted with the submesh (so that its nodes have the same numbering as the universal ventricular coordinates), but they are not segmented and keep their tags. Use meshtool convention for multiple tags. If any, set "". Default: "".
     """
 
     # find executables
     meshtoolloc = CARP_INSTALL_DIR + "/meshtool/meshtool"
 
     # set submsh tag as the union of myocardium and subendocardial layer tags
-    _submsh = ",".join(
-        [t for t in (_submsh_myo, _submsh_SE, _submsh_septSE, _submsh_FEC) if t]
-    )
+    _submsh = _submsh_myo + "," + _submsh_SE + "," + _submsh_septSE
 
     # extract submesh (i.e., RV or LV) myocardium from biv
     if not meshtool.extract_mesh(
@@ -1164,14 +1406,12 @@ def segment_biventricle(
     _SE_RV="44",
     _SE_LV="45",
     _SE_septRV="46",
-    factor_tag_myo=1e2,
-    factor_tag_SE=1e2,
+    factor_tag_myo=100,
+    factor_tag_SE=100,
     Nz=10,
-    Nrho=5,
+    Nrho_LV=5,
+    Nrho_RV=3,
     cleandir=False,
-    _FEC_RV="",
-    _FEC_LV="",
-    _FEC_septRV="",
 ):
     """Segment biventricular myocardium (including FEC layer(s), if any) into different regions along apico-basal and tranmural direction.
 
@@ -1200,23 +1440,17 @@ def segment_biventricle(
     _SE_septRV: str
         Pre-existing tag for septal subendocardial layer on the right side. Default: "46".
     factor_tag_myo : int
-        Multiplicative factor for segmented regions with respect corresponding myocardium tag. Default: 1e2.
+        Multiplicative factor for segmented regions with respect corresponding myocardium tag. Default: 100.
     factor_tag_SE : int
-        Multiplicative factor for segmented regions with respect corresponding subendocardial layer(s) tag. Default: 1e2.
+        Multiplicative factor for segmented regions with respect corresponding subendocardial layer(s) tag. Default: 100.
     Nz : int
         Number of regions along the apico-basal direction. Maximum value: 10.
-    Nrho : int
-        Number of regions along the transmural direction. Maximum value: 5.
+    Nrho_LV : int
+        Number of regions along the transmural direction in the LV. Maximum value: 5.
+    Nrho_RV : int
+        Number of regions along the transmural direction in the RV. Maximum value: 5.
     cleandir: bool
         If True, remove simulation output directory. Default: False.
-    _FEC_RV: str
-        Pre-existing tag(s) for the fast endocardial conductive layers on the RV. Use meshtool convention for multiple tags. These elements are not segmented and keep their tags. Default: "".
-    _FEC_LV: str
-        Pre-existing tag(s) for the fast endocardial conductive layers on the LV. Default: "".
-    _FEC_septRV: str
-        Pre-existing tag(s) for the fast endocardial conductive layers on the septum, on the right side. Default: "".
-
-    NOTE: all the fast endocardial conductive layers (if any) must be listed, so that the biventricular mesh extracted here has the same elements, and hence the same node numbering, as the mesh used to compute the universal ventricular coordinates.
     """
 
     # find executables
@@ -1227,7 +1461,7 @@ def segment_biventricle(
         raise Exception(
             "Number of regions along apico-basal direction must be at most 10. If a higher number is desired, suppress this exception. NOTE: CARP does not allow more than 256 different regions!"
         )
-    if Nrho > 5:
+    if Nrho_LV > 5 or Nrho_RV > 5:
         raise Exception(
             "Number of regions along transmural direction must be at most 5. If a higher number is desired, suppress this exception. NOTE: CARP does not allow more than 256 different regions!"
         )
@@ -1252,10 +1486,7 @@ def segment_biventricle(
     if not meshtool.extract_mesh(
         meshtoolloc,
         meshfolder + "/" + meshname,
-        ",".join(
-            [_RVmyo, _LVmyo, _SE_RV, _SE_LV, _SE_septRV]
-            + [t for t in (_FEC_RV, _FEC_LV, _FEC_septRV) if t]
-        ),
+        _RVmyo + "," + _LVmyo + "," + _SE_RV + "," + _SE_LV + "," + _SE_septRV,
         meshloc + "/" + finalmesh_i,
     ):
         raise Exception("meshtool error. Abort!")
@@ -1274,8 +1505,7 @@ def segment_biventricle(
         factor_tag_myo,
         factor_tag_SE,
         Nz,
-        min(Nrho, 3),
-        _submsh_FEC=",".join([t for t in (_FEC_RV, _FEC_septRV) if t]),
+        Nrho_RV,
     )
 
     segment_submesh(
@@ -1291,8 +1521,7 @@ def segment_biventricle(
         factor_tag_myo,
         factor_tag_SE,
         Nz,
-        Nrho,
-        _submsh_FEC=_FEC_LV,
+        Nrho_LV,
     )
 
     # insert biv into torso

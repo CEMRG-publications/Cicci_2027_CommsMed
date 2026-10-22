@@ -1,0 +1,24 @@
+{
+	"base" : {
+		"RVmyo"     : "34",
+		"LVmyo"     : "35",
+		"SE_RV"     : "44",
+		"SE_LV"     : "45",
+		"SE_septRV" : "46",
+		"RVbp"      : "24",
+		"LVbp"      : "25",
+		"upper_RH"  : "11,12,17,19,22,23",
+		"upper_LH"  : "13,14,16,18,20,21"
+	},
+	"construction" : {
+		"factor_tag_myo" : 100,
+		"factor_tag_SE"  : 100,
+		"factor_tag_FEC" : 100,
+		"Nz"             : 10,
+		"Nrho_LV"        : 5,
+		"Nrho_RV"        : 3,
+		"Z_FEC_min"      : 0.50,
+		"Z_FEC_max"      : 0.75,
+		"deltaZ_FEC"     : 0.02
+	}
+}

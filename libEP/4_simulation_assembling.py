@@ -22,7 +22,7 @@ from utils import setup
 def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    basefolder = OUTPUT_DIR + "/KCL1"
 
     # name of mesh to be used in EP simulation(s)
     meshname = "KCL1_gregion"
@@ -35,21 +35,22 @@ def main():
     labelfilename_scalar = "xlabels_scalar"
 
     # directory with ECG electrode coordinates
-    electfolder = OUTPUT_DIR + "/electrodes"
+    electfolder = OUTPUT_DIR + "/KCL1_electrodes"
 
     # file with ECG electrode coordinates
     electfilename = "electrodes"
 
     # directory where samples are saved
-    samplefolder = basefolder + "/samples"
+    samplefolder = basefolder + "/samples_LHS"
 
-    # directory with all required data to run EP simulations (usually, local HD)
-    storagefolder = basefolder
+    # directory where "mesh" and "data" are temporarily saved by this script. Move or copy them
+    # into clusterfolder before running the simulations (see workflow.md)
+    storagefolder = basefolder + "/basics"
 
     # set propagation type
     propagation = "RE+"  # "RE-" OR "RE+"
 
-    # if True, use .vtx file(s) for EAS common among samples and stored in /path/to/ref_QRS/0/HPS (to be uploaded on the HPC)
+    # if True, use .vtx file(s) for EAS common among samples and stored in /path/to/ref_QRS/0/HPS
     hps_ref = False
 
     # folder with CVs .adj files, if common among samples (if not, use empty string "")
@@ -61,7 +62,8 @@ def main():
     # read tags for bath regions
     tagbathfile = libEP_DIR + "/data/tag_BATH"
 
-    # directory where EP simulations will be run (same as basefolder for a local run, otherwise the path on the HPC)
+    # directory where simulations will be run: absolute path to "mesh", "data" and samplefolder
+    # NOTE: this is written in the parameter files.
     clusterfolder = basefolder
 
     # ---> START
@@ -132,6 +134,7 @@ def main():
         prepacing_bcl=1000,
         lonfolder_ref=lonfolder_ref,
         cvfolder_ref=cvfolder_ref,
+        tag_HEART_jsonfile=libEP_DIR + "/data/tag_HEART",
     )
     # <--- END
 

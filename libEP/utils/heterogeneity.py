@@ -491,11 +491,11 @@ def pool_CV_adjustment_file_preprocessing(
     meshname,
     uvcfolder,
     samplefolder,
-    _RVmyo="34,3401",
-    _LVmyo="35,3501",
-    _SE_RV="44,4401,445001",
-    _SE_LV="45,4501,455001",
-    _SE_septRV="46,4601,465001",
+    _RVmyo="34",
+    _LVmyo="35",
+    _SE_RV="44",
+    _SE_LV="45",
+    _SE_septRV="46",
 ):
     """Generate datafiles to impose heterogeneity in conductivity region (gregion), for each sample.
 
@@ -512,15 +512,15 @@ def pool_CV_adjustment_file_preprocessing(
     samplefolder: str
         Path to folder with all sample(s) details.
     _RVmyo: str
-        Pre-existing tag(s) for RV myocardium. Default: "34,3401".
+        Pre-existing tag(s) for RV myocardium. Default: "34".
     _LVmyo: str
-        Pre-existing tag(s) for LV myocardium. Default: "35,3501".
+        Pre-existing tag(s) for LV myocardium. Default: "35".
     _SE_RV: str
-        Pre-existing tag(s) for RV subendocardial layer. Default: "44,4401,445001".
+        Pre-existing tag(s) for RV subendocardial layer. Default: "44".
     _SE_LV: str
-        Pre-existing tag(s) for LV subendocardial layer. Default: "45,4501,455001".
+        Pre-existing tag(s) for LV subendocardial layer. Default: "45".
     _SE_septRV: str
-        Pre-existing tag(s) for septal subendocardial layer on the right side. Default: "46,4601,465001".
+        Pre-existing tag(s) for septal subendocardial layer on the right side. Default: "46".
     """
 
     # find executables

@@ -23,27 +23,17 @@ from utils import carp_func
 def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"
 
     # directory with current mesh in carp_txt format
     meshfolder = OUTPUT_DIR + "/mesh"
 
     # ---> START
+    basefolder = OUTPUT_DIR + "/" + meshname
     os.makedirs(basefolder, exist_ok=True)
 
-    ### MESH TAGS TO BE USED (mesh-dependent) ###
-    _RVmyo="34"  # existing tag for the RV myocardium
-    _LVmyo="35"  # existing tag for the LV myocardium
-    _SE_RV="44"  # new tag for the RV sub-endocardial layer
-    _SE_LV="45"  # new tag for the LV sub-endocardial layer
-    _SE_septRV="46"  # new tag for the RV-septal sub-endocardial layer
-    _RVbp="24"  # existing tag for the RV blood pool
-    _LVbp="25"  # existing tag for the LV blood pool
-    _upper_RH="11,12,17,19,22,23"  # existing tag for the right heart (excluding RV myocardium and blood pool)
-    _upper_LH="13,14,16,18,20,21"  # existing tag for the left heart (excluding LV myocardium and blood pool)
-    uvctagfile=libEP_DIR + "/data/tag_CARP_UVC.sh"
-    ##############################################
+    # read mesh tags from json file
+    tags, par = proc.get_heart_tags(libEP_DIR + "/data/tag_HEART", libEP_DIR + "/data/tag_BATH")
 
     ## --------------- UVC --------------- ##
     # Compute UVC using CARPentry code
@@ -51,14 +41,14 @@ def main():
         CARP_INSTALL_DIR,
         meshfolder,
         meshname,
-        uvctagfile,
+        libEP_DIR + "/data/tag_CARP_UVC.sh",
         basefolder + "/UVC",
-        _RVmyo=_RVmyo,
-        _LVmyo=_LVmyo,
-        _RVbp=_RVbp,
-        _LVbp=_LVbp,
-        _upper_RH=_upper_RH,
-        _upper_LH=_upper_LH,
+        _RVmyo=tags["RVmyo"],
+        _LVmyo=tags["LVmyo"],
+        _RVbp=tags["RVbp"],
+        _LVbp=tags["LVbp"],
+        _upper_RH=tags["upper_RH"],
+        _upper_LH=tags["upper_LH"],
         cleandir=True,
     )
 
@@ -71,15 +61,15 @@ def main():
         meshname + "_subendolayer",
         meshname + "_SElayer",
         basefolder + "/UVC",
-        _RVmyo=_RVmyo,
-        _LVmyo=_LVmyo,
-        _RVbp=_RVbp,
-        _LVbp=_LVbp,
-        _upper_RH=_upper_RH,
-        _upper_LH=_upper_LH,
-        _SE_RV=_SE_RV,
-        _SE_LV=_SE_LV,
-        _SE_septRV=_SE_septRV,
+        _RVmyo=tags["RVmyo"],
+        _LVmyo=tags["LVmyo"],
+        _RVbp=tags["RVbp"],
+        _LVbp=tags["LVbp"],
+        _upper_RH=tags["upper_RH"],
+        _upper_LH=tags["upper_LH"],
+        _SE_RV=tags["SE_RV"],
+        _SE_LV=tags["SE_LV"],
+        _SE_septRV=tags["SE_septRV"],
         cleandir=True,
     )
 
@@ -91,11 +81,15 @@ def main():
         basefolder,
         meshname + "_FEC",
         basefolder + "/UVC",
-        _RVmyo=_RVmyo,
-        _LVmyo=_LVmyo,
-        _SE_RV=_SE_RV,
-        _SE_LV=_SE_LV,
-        _SE_septRV=_SE_septRV,
+        _RVmyo=tags["RVmyo"],
+        _LVmyo=tags["LVmyo"],
+        _SE_RV=tags["SE_RV"],
+        _SE_LV=tags["SE_LV"],
+        _SE_septRV=tags["SE_septRV"],
+        factor_tag_FEC=par["factor_tag_FEC"],
+        Z_FEC_min=par["Z_FEC_min"],
+        Z_FEC_max=par["Z_FEC_max"],
+        deltaZ_FEC=par["deltaZ_FEC"],
         cleandir=True,
     )
 
@@ -107,19 +101,22 @@ def main():
         basefolder,
         meshname + "_gregion",
         basefolder + "/UVC",
-        _RVmyo=_RVmyo,
-        _LVmyo=_LVmyo,
-        _SE_RV=_SE_RV,
-        _SE_LV=_SE_LV,
-        _SE_septRV=_SE_septRV,
-        Nz=10,
-        Nrho=5,
+        _RVmyo=tags["RVmyo"],
+        _LVmyo=tags["LVmyo"],
+        # sub-endocardial layer tag, plus the tags of the fast endocardial conductive layers
+        _SE_RV=tags["SE_RV_FEC"],
+        _SE_LV=tags["SE_LV_FEC"],
+        _SE_septRV=tags["SE_septRV_FEC"],
+        factor_tag_myo=par["factor_tag_myo"],
+        factor_tag_SE=par["factor_tag_SE"],
+        Nz=par["Nz"],
+        Nrho_LV=par["Nrho_LV"],
+        Nrho_RV=par["Nrho_RV"],
         cleandir=True,
-        # tags of the fast endocardial conductive layers (see compute_FEC_layers: factor_tag_FEC * SE tag + layer, with layer from 100 * Z_FEC_min to 100 * Z_FEC_max in steps of 100 * deltaZ_FEC)
-        _FEC_RV=",".join([str(i) for i in range(int(_SE_RV)*100+50, int(_SE_RV)*100+75, 2)]),
-        _FEC_LV=",".join([str(i) for i in range(int(_SE_LV)*100+50, int(_SE_LV)*100+75, 2)]),
-        _FEC_septRV=",".join([str(i) for i in range(int(_SE_septRV)*100+50, int(_SE_septRV)*100+75, 2)]),
     )
+
+    # number of regions of the segmented mesh (CARPentry allows at most 256)
+    proc.count_heart_regions(basefolder, meshname + "_gregion", tags)
     # <--- END
 
 

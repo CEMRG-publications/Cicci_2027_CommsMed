@@ -10,6 +10,7 @@ __email__ = l.cicci@imperial.ac.uk
 # dependencies
 from utils import IO
 from utils import meshtool_func as meshtool
+from utils import processing_mesh as proc
 
 # extra imports
 import os
@@ -847,6 +848,7 @@ def write_par_gregion(
     _SE_biv_list=[44, 45, 46],
     parfile_tissue="pfile_TISSUE",
     cvfolder_ref="",
+    tag_HEART_jsonfile="",
 ):
     """Write tissue conductivity section in .par file, for each sample.
 
@@ -871,6 +873,8 @@ def write_par_gregion(
         Basename of .par file with basic commands to adjust tissue properties (without extension). Default: "pfile_TISSUE".
     cvfolder_ref: str
         Path to .adj files with CVs common among all samples (without extension), if any. Default: "".
+    tag_HEART_jsonfile: str
+        Path to .json file with the tags of the heart regions (without extension). Needed when the conduction velocity is not spatially varying, to tell myocardium from fast endocardial layer. Default: "".
     """
 
     # find executables
@@ -1007,18 +1011,14 @@ def write_par_gregion(
                 myo_tag_values = list(set(myo_tag_values) - set(_SE_biv_list))
 
             else:
-                # update tags depending con current Zmax_SE
-                myo_tag_values = []
-                for tag in myo_SE_tag_keys:
-                    if (
-                        len(str(tag)) <= 2
-                        or int(str(tag)[2:4]) > 1e2 * par_dct["Zmax_SE"]
-                    ):
-                        myo_tag_values.append(tag)
-
-                # TODO: check if it works
-                # remove SElayer tags from myo_tags manually
-                myo_tag_values = list(set(myo_tag_values) - set(_SE_biv_list))
+                # tags of ordinary myocardium (the other tags are fast endocardial layer), depending on current Zmax_SE
+                if not tag_HEART_jsonfile:
+                    raise Exception(
+                        "tag_HEART_jsonfile is needed when the conduction velocity is not spatially varying."
+                    )
+                myo_tag_values = proc.get_myocardium_tags(
+                    myo_SE_tag_keys, par_dct["Zmax_SE"], tag_HEART_jsonfile
+                )
 
             for j, key in enumerate(bath_dct):
                 parf.write("gregion[{}].name    = {}\n".format(j, key))
@@ -1306,6 +1306,7 @@ def write_par_tissue(
     parfile_tissue="pfile_TISSUE",
     lonfolder_ref="",
     cvfolder_ref="",
+    tag_HEART_jsonfile="",
 ):
     """Write tissue-related .par file, for each sample.
 
@@ -1345,6 +1346,8 @@ def write_par_tissue(
         Basename of .par file with basic commands to adjust tissue properties (without extension). Default: "pfile_TISSUE".
     lonfolder_ref: str
         Path to .lon file with fibre orientation different than default (without extension), if any. Default: "".
+    tag_HEART_jsonfile: str
+        Path to .json file with the tags of the heart regions (without extension). Needed when the conduction velocity is not spatially varying. Default: "".
     """
 
     # find .txt file with accepted parameters
@@ -1411,6 +1414,7 @@ def write_par_tissue(
         tag_BATH_jsonfile,
         tune_CV_csvfile,
         cvfolder_ref=cvfolder_ref,
+        tag_HEART_jsonfile=tag_HEART_jsonfile,
     )
 
     return
