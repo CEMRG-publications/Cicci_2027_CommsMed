@@ -64,25 +64,14 @@ def extract_im_par(samplefolder, labelfolder, imfilename, im="ToRORd_dynCl"):
             par_all_dct = IO.read_json(paramfile)
             par_all_keys = list(par_all_dct.keys())
 
-            # biventricular heterogeneity
-            biv_ch = []
-            if any("_LV" in key for key in par_all_keys):
-                biv_ch.append("_LV")
-            if any("_RV" in key for key in par_all_keys):
-                biv_ch.append("_RV")
-            if not biv_ch:
-                biv_ch = [""]
-
             # find ionic model parameters among scalar and spatially varying parameters (if any)
             im_par_scl = []
             im_par_grad = []
             for key in par_all_keys:
                 if key in im_par:
                     im_par_scl.append(key)
-                else:
-                    ch = biv_ch[0]
-                    if key.replace(ch + "_theta", "") in im_par:
-                        im_par_grad.append(key.replace(ch + "_theta", ""))
+                elif key.replace("_theta", "") in im_par:
+                    im_par_grad.append(key.replace("_theta", ""))
 
             # convert theta, grad_rho and grad_z into apex/base values at the epi/endocardium
             #   1- apex_epi =: theta
@@ -93,10 +82,8 @@ def extract_im_par(samplefolder, labelfolder, imfilename, im="ToRORd_dynCl"):
             # initialisation
             imp_scl_dct = {}
             imp_grad_dct = {}
-            for ch in biv_ch:
-                imp_grad_dct[ch] = {}
-                for p in ["apex_epi", "apex_endo", "base_epi", "base_endo"]:
-                    imp_grad_dct[ch][p] = {}
+            for p in ["apex_epi", "apex_endo", "base_epi", "base_endo"]:
+                imp_grad_dct[p] = {}
 
             # save scalar ionic parameter values
             for imp in im_par_scl:
@@ -104,63 +91,59 @@ def extract_im_par(samplefolder, labelfolder, imfilename, im="ToRORd_dynCl"):
 
             # save spatially varying ionic parameter values at apex/base epi/endo
             for imp in list(set(im_par_grad)):
-                for ch in biv_ch:
-                    imp_grad_dct[ch]["apex_epi"][imp] = par_all_dct[imp + ch + "_theta"]
-                    imp_grad_dct[ch]["apex_endo"][imp] = (
-                        par_all_dct[imp + ch + "_theta"]
-                        * par_all_dct[imp + ch + "_grad_rho"]
-                    )
-                    imp_grad_dct[ch]["base_epi"][imp] = (
-                        par_all_dct[imp + ch + "_theta"]
-                        * par_all_dct[imp + ch + "_grad_z"]
-                    )
-                    imp_grad_dct[ch]["base_endo"][imp] = (
-                        par_all_dct[imp + ch + "_theta"]
-                        * par_all_dct[imp + ch + "_grad_rho"]
-                        * par_all_dct[imp + ch + "_grad_z"]
-                    )
+                imp_grad_dct["apex_epi"][imp] = par_all_dct[imp + "_theta"]
+                imp_grad_dct["apex_endo"][imp] = (
+                    par_all_dct[imp + "_theta"] * par_all_dct[imp + "_grad_rho"]
+                )
+                imp_grad_dct["base_epi"][imp] = (
+                    par_all_dct[imp + "_theta"] * par_all_dct[imp + "_grad_z"]
+                )
+                imp_grad_dct["base_endo"][imp] = (
+                    par_all_dct[imp + "_theta"]
+                    * par_all_dct[imp + "_grad_rho"]
+                    * par_all_dct[imp + "_grad_z"]
+                )
 
             # assemble all parameters in a list
             imp_dct = {}
             if list(set(im_par_grad)):
-                for ch in biv_ch:
-                    imp_list = []
-                    for p in ["apex_epi", "apex_endo", "base_epi", "base_endo"]:
-                        # TODO: add "flags=..." only when using ToR-ORd models
-                        if im == "ToRORd_dynCl":
-                            imp_list.append(
-                                "flags=ENDO,"
-                                + ",".join(
-                                    [
-                                        imp + "=" + str(imp_scl_dct[imp])
-                                        for imp in list(imp_scl_dct.keys())
-                                    ]
-                                )
-                                + ","
-                                + ",".join(
-                                    [
-                                        imp + "=" + str(imp_grad_dct[ch][p][imp])
-                                        for imp in list(imp_grad_dct[ch][p].keys())
-                                    ]
-                                )
+                imp_list = []
+                for p in ["apex_epi", "apex_endo", "base_epi", "base_endo"]:
+                    # TODO: add "flags=..." only when using ToR-ORd models
+                    if im == "ToRORd_dynCl":
+                        imp_list.append(
+                            "flags=ENDO,"
+                            + ",".join(
+                                [
+                                    imp + "=" + str(imp_scl_dct[imp])
+                                    for imp in list(imp_scl_dct.keys())
+                                ]
                             )
-                        else:
-                            imp_list.append(
-                                ",".join(
-                                    [
-                                        imp + "=" + str(imp_scl_dct[imp])
-                                        for imp in list(imp_scl_dct.keys())
-                                    ]
-                                )
-                                + ","
-                                + ",".join(
-                                    [
-                                        imp + "=" + str(imp_grad_dct[ch][p][imp])
-                                        for imp in list(imp_grad_dct[ch][p].keys())
-                                    ]
-                                )
+                            + ","
+                            + ",".join(
+                                [
+                                    imp + "=" + str(imp_grad_dct[p][imp])
+                                    for imp in list(imp_grad_dct[p].keys())
+                                ]
                             )
-                    imp_dct[ch.replace("_", "")] = imp_list
+                        )
+                    else:
+                        imp_list.append(
+                            ",".join(
+                                [
+                                    imp + "=" + str(imp_scl_dct[imp])
+                                    for imp in list(imp_scl_dct.keys())
+                                ]
+                            )
+                            + ","
+                            + ",".join(
+                                [
+                                    imp + "=" + str(imp_grad_dct[p][imp])
+                                    for imp in list(imp_grad_dct[p].keys())
+                                ]
+                            )
+                        )
+                imp_dct["biv"] = imp_list
             else:
                 # TODO: add "flags=..." only when using ToR-ORd models
                 if im == "ToRORd_dynCl":
@@ -534,6 +517,67 @@ def samples_screening(
         )
     elif os.path.exists(missingfile + ".txt"):
         os.remove(missingfile + ".txt")
+
+    return
+
+
+def check_whole_organ_samples(
+    CARP_INSTALL_DIR,
+    samplefolder,
+    ionicmodel="ToRORd_dynCl",
+    labelfilename_im="ToRORd_dynCl",
+    numstim=35,
+    bcl=1000,
+    dt_out=0.5,
+    range_dct={
+        "APD(n)": [180, 440],
+        "VmMax": [10, 55],
+        "VmMin": [-95, -80],
+    },  # based on doi.org/10.1016/j.cmpb.2023.107860
+    num_proc=1,
+):
+    """Preliminary single-cell check of whole-organ samples, to discard samples that are highly likely to fail.
+
+    Extract the ionic model parameters of each sample, run the single-cell simulations (the ones already completed are not run again) and write "accepted_samples.txt" in the sample folder. Samples with a missing output are listed in "missing_statistics.txt".
+
+    Parameters
+    ----------
+    CARP_INSTALL_DIR: str
+        Path to CARPentry installation directory.
+    samplefolder: str
+        Path to folder with all sample(s) details.
+    ionicmodel: str
+        Name of the ionic model as given in "bench --list-imp". Default: "ToRORd_dynCl".
+    labelfilename_im: str
+        Name of .txt file with labels of all ionic model parameters (without extension), in the sample folder. Default: "ToRORd_dynCl".
+    numstim: int
+        Number of stimuli. Default: 35.
+    bcl: double
+        Basic cycle length. Default: 1000.
+    dt_out: double
+        Temporal output granularity. Default: 0.5.
+    range_dct: dict
+        Viable range for action potential features, as given the the AP_stats datafile. Default: {"APD(n)":[180,440],"VmMax":[10,55],"VmMin":[-95,-80]}.
+    num_proc: int
+        Number of samples simulated at the same time. Default: 1 (one after the other).
+    """
+
+    extract_im_par(samplefolder, samplefolder, labelfilename_im, im=ionicmodel)
+
+    samples_screening(
+        CARP_INSTALL_DIR,
+        samplefolder,
+        ionicmodel,
+        numstim=numstim,
+        bcl=bcl,
+        dt_out=dt_out,
+        range_dct=range_dct,
+        savetrace=False,
+        savestate=False,
+        cleandir=True,
+        visualise=False,
+        num_proc=num_proc,
+    )
 
     return
 
