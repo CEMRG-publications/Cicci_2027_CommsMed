@@ -24,7 +24,7 @@ from utils import IO
 def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    basefolder = OUTPUT_DIR + "/KCL1"
 
     # name of .json file with default parameter values
     paramfilename = "simulation_parameters_fitting_biv"

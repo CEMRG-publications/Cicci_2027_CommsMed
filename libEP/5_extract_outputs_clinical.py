@@ -22,7 +22,7 @@ from utils import global_sensitivity_analysis as gsa
 def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"
 
     # current ECG segment
@@ -34,6 +34,7 @@ def main():
     # PCA threshold
     threshold_PCA = 0.99
 
+    # ---> START
     if "QRScomplex" in ECGsegment:
         # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
         PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_{}%".format(
@@ -57,7 +58,6 @@ def main():
     ecgdatafolder = basefolder + "/target"
     ecgdatafilename = "ECG_from_BSP"
 
-    # ---> START
     gsa.extract_output_from_clinical_ecg(
         PCAbasisfolder,
         ecgdatafolder,

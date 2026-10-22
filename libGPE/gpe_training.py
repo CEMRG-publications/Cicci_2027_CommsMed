@@ -33,12 +33,16 @@ def main():
     single_cell = False
 
     if single_cell:
-        gpe_folder_basename = OUTPUT_DIR + "/ToRORd_dynCl"
+        basefolder = OUTPUT_DIR + "/ToRORd_dynCl"
+        qoi_basefolder = basefolder + "/qoi"
+        gpe_folder_basename = basefolder + "/gpe"
     else:
-        gpe_folder_basename = OUTPUT_DIR + "/KCL1/History_Matching"
-
         # current ECG segment
         ECGsegment = "QRScomplex"
+
+        basefolder = OUTPUT_DIR + "/KCL1/History_Matching/" + ECGsegment
+        qoi_basefolder = basefolder
+        gpe_folder_basename = basefolder + "/gpe"
 
         if not train_gpes:
             # target folder for current case
@@ -54,11 +58,10 @@ def main():
     esc_type = "GL"
 
     if single_cell:
-        qoi_folder_list = [OUTPUT_DIR + "/ToRORd_dynCl/qoi"]
+        qoi_folder_list = [qoi_basefolder]
         gpe_folder = gpe_folder_basename + "/GPE_" + kernel_type + "_" + esc_type
     elif train_gpes:
-        # path(s) to folder with QoI(s): initial space and waves 1 to waveno
-        qoi_basefolder = gpe_folder_basename + "/" + ECGsegment
+        # initial space and waves 1 to waveno
         qoi_folder_list = [qoi_basefolder + "/qoi_initial_space"] + [
             qoi_basefolder + "/qoi_wave_" + str(k) for k in range(1, waveno + 1)
         ]
@@ -67,8 +70,6 @@ def main():
         wave_name = "initial_space" if waveno == 0 else "wave_" + str(waveno)
         gpe_folder = (
             gpe_folder_basename
-            + "/gpe/"
-            + ECGsegment
             + "/"
             + wave_name
             + "/GPE_"

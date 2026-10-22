@@ -32,7 +32,7 @@ The matrix H of interpolation points is automatically built by running "linear_f
 if __name__ == "__main__":
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"
 
     # current ECG segment
@@ -44,31 +44,6 @@ if __name__ == "__main__":
     # PCA threshold
     threshold_PCA = 0.99
 
-    if "QRScomplex" in ECGsegment:
-        # directory where all qoi are saved (usually, local HD)
-        qoifolder = basefolder + "/qoi_fitting_150ms"
-        # directory where PCA basis is saved.
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_{}%".format(str(int(100 * threshold_PCA)))
-        # basename for 12-lead ECG signal and PCA-basis
-        ECGname = "ECG_12leads_truncated"  # "12leads_truncated" | "ECG_12leads_REP"
-        WLname = "WL_12leads_truncated"  # 12leads_truncated" | "WL_12leads_REP"
-    elif "Twave" in ECGsegment:
-        # directory where all qoi are saved (usually, local HD)
-        qoifolder = basefolder + "/qoi_fitting_REP" 
-        # directory where PCA basis is saved.
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_REP_{}%".format(str(int(100 * threshold_PCA)))
-        # basename for 12-lead ECG signal and PCA-basis
-        ECGname = "ECG_12leads_REP"  # "12leads_truncated" | "ECG_12leads_REP"
-        WLname = "WL_12leads_REP"  # 12leads_truncated" | "WL_12leads_REP"
-    else:
-        # directory where all qoi are saved (usually, local HD)
-        qoifolder = basefolder + "/qoi_fitting" 
-        # directory where PCA basis is saved.
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_{}%".format(str(int(100 * threshold_PCA)))
-        # basename for 12-lead ECG signal and PCA-basis
-        ECGname = "ECG_12leads"  # "12leads_truncated" | "ECG_12leads_REP"
-        WLname = "WL_12leads"  # 12leads_truncated" | "WL_12leads_REP"
-
     # cut-off for model parameters [for HM]
     cutoff = 0.95
 
@@ -76,10 +51,44 @@ if __name__ == "__main__":
     visualise = True  # False
 
 
-    # START --->
-    # IO
-    plotfolder = qoifolder + "/LSA"
+    # ---> START
+    if "QRScomplex" in ECGsegment:
+        # directory where all qoi are saved (usually, local HD)
+        qoifolder = basefolder + "/qoi_fitting_150ms"
+        
+        # directory where PCA basis is saved.
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_{}%".format(str(int(100 * threshold_PCA)))
+        
+        # basename for 12-lead ECG signal and PCA-basis
+        ECGname = "ECG_12leads_truncated"  # "12leads_truncated" | "ECG_12leads_REP"
+        WLname = "WL_12leads_truncated"  # 12leads_truncated" | "WL_12leads_REP"
+
+    elif "Twave" in ECGsegment:
+        # directory where all qoi are saved (usually, local HD)
+        qoifolder = basefolder + "/qoi_fitting_REP" 
+        
+        # directory where PCA basis is saved.
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_REP_{}%".format(str(int(100 * threshold_PCA)))
+        
+        # basename for 12-lead ECG signal and PCA-basis
+        ECGname = "ECG_12leads_REP"  # "12leads_truncated" | "ECG_12leads_REP"
+        WLname = "WL_12leads_REP"  # 12leads_truncated" | "WL_12leads_REP"
+
+    else:
+        # directory where all qoi are saved (usually, local HD)
+        qoifolder = basefolder + "/qoi_fitting" 
+        
+        # directory where PCA basis is saved.
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_{}%".format(str(int(100 * threshold_PCA)))
+        
+        # basename for 12-lead ECG signal and PCA-basis
+        ECGname = "ECG_12leads"  # "12leads_truncated" | "ECG_12leads_REP"
+        WLname = "WL_12leads"  # 12leads_truncated" | "WL_12leads_REP"
+
+     # IO
+    plotfolder = qoifolder + "/lsa"
     os.makedirs(plotfolder, exist_ok=True)
+
 
     ## --------------- SCREENING --------------- ##
 

@@ -23,11 +23,10 @@ from utils import sampling
 def main():
     check_paths("OUTPUT_DIR")
 
+    hmfolder = OUTPUT_DIR + "/KCL1/History_Matching/QRScomplex"
+
     # current wave ID
     waveno = 1
-
-    # folder of the current history matching run
-    basefolder = OUTPUT_DIR + "/KCL/History_Matching/QRScomplex"
 
     # name of .json file with default parameter values
     paramfilename = "simulation_parameters_fitting_biv" # "simulation_parameters_fitting_biv_best-fit_QRS"
@@ -37,10 +36,10 @@ def main():
     labelfilename = "xlabels_calibration_QRS" # "xlabels_calibration_Twave"
 
     # HM new samples for current wave (genereted in previous wave)
-    simulfolder = basefolder + "/output"
+    simulfolder = hmfolder + "/output"
 
     # directory where all samples and sampling data will be saved (usually, local HD)
-    samplefolder = basefolder + "/samples_wave_" + str(waveno)
+    samplefolder = hmfolder + "/samples_wave_" + str(waveno)
 
     # ---> START
     os.makedirs(samplefolder, exist_ok=True)

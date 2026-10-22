@@ -23,44 +23,47 @@ from utils import bayesian_history_matching
 if __name__ == "__main__":
     check_paths("OUTPUT_DIR")
 
-    # current ECG segment
+    basefolder = OUTPUT_DIR + "/KCL1"
+
+    # current ECG segment: QRScomplex | Twave
     ECGsegment = "QRScomplex"
 
     # current wave ID
-    waveno = 3
-
-    basefolder = OUTPUT_DIR + "/KCL"
-
-    # path to main folder with GPE(s) for current wave (trained on the data up to the previous wave)
-    gpe_wave_name = "initial_space" if waveno == 1 else "wave_" + str(waveno - 1)
-    gpe_folder = OUTPUT_DIR + "/gpe/KCL/" + ECGsegment + "/" + gpe_wave_name + "/GPE_Matern_GL"
-
-    # path to Bayesian History Matching (BHM) folder
-    bhm_folder = basefolder + "/History_Matching/" + ECGsegment
-
-    # path to folder with target data (built with gpe_training.py, see workflow.md)
-    target_folder = basefolder + "/target/qoi_" + ECGsegment
+    waveno = 1
 
     # threshold value for implausibility criterion
-    cutoff = 3.0
-
-    # number of test points per wave
-    n_tests = 100000
+    cutoff = 4.0
 
     # number of points to simulate per wave: n_simuls_factor * number of parameters (use 100 in the last wave)
     n_simuls_factor = 10
 
+    # kernel type used
+    kernel_type = "Matern"
+
+    # early stopping criteria used
+    esc_type = "GL"
+
+    # path to folder with target data (built with gpe_training.py, see workflow.md)
+    target_folder = basefolder + "/target/qoi_" + ECGsegment
+
+    # path to history matching basefolder
+    hmfolder = basefolder + "/History_Matching/" + ECGsegment
+
+    # path to main folder with GPE(s) for current wave (trained on the data up to the previous wave)
+    gpe_wave_name = "initial_space" if waveno == 1 else "wave_" + str(waveno - 1)
+    gpe_folder = hmfolder + "/gpe/" + gpe_wave_name + "/GPE_" + kernel_type + "_" + esc_type   
+
     # ================================================================
     # IO folder(s)
     # ================================================================
-    if not os.path.exists(bhm_folder):
-        os.makedirs(bhm_folder)
+    if not os.path.exists(hmfolder):
+        os.makedirs(hmfolder)
 
-    output_dir = bhm_folder + "/output"
+    output_dir = hmfolder + "/output"
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
-    plot_dir = bhm_folder + "/figures"
+    plot_dir = hmfolder + "/figures"
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
@@ -92,8 +95,8 @@ if __name__ == "__main__":
         waveno=waveno,
         cutoff=cutoff,
         maxno=1,
-        n_tests=n_tests,
+        n_tests=100000,
         n_simuls=len(xlabels) * n_simuls_factor,
         plot_dir=plot_dir,
-        targetfile="", #target_folder + "/data/X",
+        targetfile="", #target_folder + "/data/X", (only for plots)
     )

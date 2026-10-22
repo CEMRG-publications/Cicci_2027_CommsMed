@@ -159,9 +159,6 @@ def extract_output_from_ecg(
     successful_samples = ""
     for i in natsorted(os.listdir(simulationfolder)):
         if "EP" in i:
-            #if os.path.exists(
-            #    simulationfolder + "/" + i + "/init_acts_ACT-thresh.dat"
-            #) and os.path.getsize(simulationfolder + "/" + i + "/electrics.log"):
             bspdatfile = simulationfolder + "/" + i + "/lead_field_egms.dat"
             if os.path.exists(bspdatfile) and os.path.getsize(bspdatfile):
                 successful_simulations.append(int(i.replace("SIM_EP_", "")))

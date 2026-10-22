@@ -30,37 +30,30 @@ from GPErks.serialization.path import posix_path
 if __name__ == "__main__":
     check_paths("OUTPUT_DIR")
 
+    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"
+
+    # current ECG segment: QRScomplex | Twave
     ECGsegment = "QRScomplex"
 
-    basefolder = OUTPUT_DIR + "/KCL"
+    # path to history matching basefolder
+    hmfolder = basefolder + "/History_Matching/" + ECGsegment
 
     # final wave number
     final_waveno = 1
 
     # number of best-fitting samples to save
-    K = 10
-
-    # path to HM output folder
-    outputfolder = basefolder + "/History_Matching/" + ECGsegment + "/output"
-
-    # path to folder with HM plots
-    plotfolder = basefolder + "/History_Matching/" + ECGsegment + "/figures"
-
-    # path to GPE folder
-    if final_waveno == 1:
-        gpefolder = OUTPUT_DIR + "/gpe/" + os.path.basename(basefolder) + "/" + ECGsegment + "/initial_space"
-    else:
-        gpefolder = OUTPUT_DIR + "/gpe/" + os.path.basename(basefolder) + "/" + ECGsegment + "/wave_" + str(final_waveno - 1)
+    K = 100
 
     # flag for clinical data
     flag_clinical = False
 
+    # name of datafile with clinical ECG data
+    if flag_clinical:
+        bspfilename = "ECG_from_BSP"
+
     # path to folder with target simulation
     targetfolder = basefolder + "/target"
-
-    # name of datafile with clinical ECG data
-    bspfilename = "ECG_from_BSP"
 
     # additional settings
     if "QRScomplex" in ECGsegment:
@@ -75,6 +68,18 @@ if __name__ == "__main__":
         PCAbasisfilename = "WL_12leads_REP"
         # simulation end time point
         tend = 500
+
+    # path to HM output folder
+    outputfolder = hmfolder + "/output"
+
+    # path to folder with HM plots
+    plotfolder = hmfolder + "/figures"
+
+    # path to GPE folder
+    if final_waveno == 1:
+        gpefolder = hmfolder + "/gpe/initial_space"
+    else:
+        gpefolder = hmfolder + "/gpe/wave_" + str(final_waveno - 1)
 
     # ---> START
     # IO
@@ -101,24 +106,21 @@ if __name__ == "__main__":
     target_inputs_labels = IO.read_text(
         targetfolder + "/qoi_" + ECGsegment + "/data/xlabels"
     )
-    if not flag_clinical:
-        target_inputs = IO.read_float_text(targetfolder + "/qoi_" + ECGsegment + "/data/X")
-
-        # create dictionary of target inputs
-        target_dct = {}
-        for i in range(len(target_inputs)):
-            target_dct[target_inputs_labels[i]] = target_inputs[i]
-
     # get target PCA modes
     Y_target_df = pd.read_csv(targetfolder + "/qoi_" + ECGsegment + "/outputs.csv")
 
     # get output names
     qoi_list = list(Y_target_df.columns.values)
     if not L == len(qoi_list):
-        raise Exception(f"Error! Inconsistent number of outputs. Check {PCAbasisfolder}/{PCAbasisfilename} and {targetfolder}/qoi_" + ECGsegment + "/output.csv")
+        raise Exception(f"Error! Inconsistent number of outputs. Check {PCAbasisfolder}/{PCAbasisfilename} and {targetfolder}/qoi_" + ECGsegment + "/outputs.csv")
 
     # get NIMP input parameters for current wave
     NIMP = IO.read_json(outputfolder + "/wave_" + str(final_waveno))["NIMP"]
+
+    # K cannot be larger than the number of non-implausible points
+    if K > len(NIMP):
+        print(f"WARNING: K = {K} is larger than the number of NIMP points ({len(NIMP)}). Using K = {len(NIMP)}.")
+        K = len(NIMP)
 
     # load last wave's NIMP points and predict PCA coefficients for each sample
     Y_pred = np.zeros((len(qoi_list), len(NIMP)))
@@ -230,7 +232,7 @@ if __name__ == "__main__":
     else:
         plt.plot(ECG_t, "r--", label="Target")
     plt.legend()
-    plt.title(f"{meshname} - {ECGsegment} : RMSE best {str(K)} NIMPs wave_{str(final_waveno)}: RMSE in [{RMSE[sort_best_idx_RMSE[0]]:.2f},{RMSE[sort_best_idx_RMSE[K]]:.2f}]")
+    plt.title(f"{meshname} - {ECGsegment} : RMSE best {str(K)} NIMPs wave_{str(final_waveno)}: RMSE in [{RMSE[sort_best_idx_RMSE[0]]:.2f},{RMSE[sort_best_idx_RMSE[K-1]]:.2f}]")
     plt.savefig(f"{valfolder}/{meshname}_{ECGsegment}_NIMP_wave_{str(final_waveno)}")
 
     # print information

@@ -26,10 +26,10 @@ def main():
     check_paths("OUTPUT_DIR")
 
     # path to folder where the GPEs of the single-cell model are saved (see gpe_training.py)
-    gpe_folder = OUTPUT_DIR + "/ToRORd_dynCl/GPE_Matern_GL"
+    gpe_folder = OUTPUT_DIR + "/ToRORd_dynCl/gpe/GPE_Matern_GL"
 
     # path to folder where GSA results will be saved
-    gsa_folder = OUTPUT_DIR + "/ToRORd_dynCl/GSA"
+    gsa_folder = OUTPUT_DIR + "/ToRORd_dynCl/gsa"
     os.makedirs(gsa_folder, exist_ok=True)
 
     # choose cut-off threshold for GSA
