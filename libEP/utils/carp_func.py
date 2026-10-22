@@ -522,10 +522,10 @@ def compute_fibres_system(
     # remove unnecessary files
     os.remove(parfile)
     for currentdir in directory:
-        os.chdir(outputfolder + "/" + currentdir)
-        for item in os.listdir():
+        currentpath = outputfolder + "/" + currentdir
+        for item in os.listdir(currentpath):
             if item != "phie.dat":
-                os.remove(item)
+                os.remove(currentpath + "/" + item)
     return
 
 

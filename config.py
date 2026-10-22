@@ -17,6 +17,16 @@ OUTPUT_DIR = ""  # folder where results are written
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 libEP_DIR = os.path.join(ROOT_DIR, "libEP")
 
+# Relative paths are taken relative to ROOT_DIR, so that the scripts do not depend on the folder they are launched from
+if CARP_INSTALL_DIR:
+    CARP_INSTALL_DIR = os.path.normpath(
+        os.path.join(ROOT_DIR, os.path.expanduser(CARP_INSTALL_DIR))
+    )
+if OUTPUT_DIR:
+    OUTPUT_DIR = os.path.normpath(
+        os.path.join(ROOT_DIR, os.path.expanduser(OUTPUT_DIR))
+    )
+
 
 def check_paths(*names):
     for name in names:
