@@ -22,10 +22,11 @@ from utils import setup
 def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
+    meshname = "KCL1" # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # name of mesh to be used in EP simulation(s)
-    meshname = "KCL1_gregion"
+    meshname_EP = meshname + "_gregion"
 
     # name of ionic model and name of labelfile
     ionicmodelname = "ToRORd_dynCl"
@@ -35,10 +36,10 @@ def main():
     labelfilename_scalar = "xlabels_scalar"
 
     # directory with ECG electrode coordinates
-    electfolder = OUTPUT_DIR + "/KCL1_electrodes"
+    electfolder = libEP_DIR + "/data/electrodes"
 
     # file with ECG electrode coordinates
-    electfilename = "electrodes"
+    electfilename = meshname + "_electrodes"
 
     # directory where samples are saved
     samplefolder = basefolder + "/samples_LHS"
@@ -76,9 +77,9 @@ def main():
     setup.copy_mesh(
         CARP_INSTALL_DIR,
         basefolder,
-        meshname,
+        meshname_EP,
         storage_meshfolder,
-        meshname,
+        meshname_EP,
         extract_myo=False,
     )
 
@@ -90,7 +91,7 @@ def main():
 
     # find electrode vertices on current torso mesh
     elect_vtx = setup.electrodes_pts2vtx(
-        basefolder, meshname, electfolder, electfilename, storage_datafolder
+        basefolder, meshname_EP, electfolder, electfilename, storage_datafolder
     )
 
     # write lead_field basic commands
@@ -117,7 +118,7 @@ def main():
     setup.write_par_tissue(
         CARP_INSTALL_DIR,
         basefolder,
-        meshname,
+        meshname_EP,
         labelfilename_im,
         samplefolder,
         labelfilename_scalar,
