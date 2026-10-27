@@ -35,23 +35,17 @@ def main():
     threshold_PCA = 0.99
 
     # ---> START
+
+    thPCA = str(int(100 * threshold_PCA))
+
     if "QRScomplex" in ECGsegment:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_{}%".format(
-            str(int(100 * threshold_PCA))
-        )
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_" + thPCA + "%"
         qoi_list = ["12leads_truncated"]
     elif "Twave" in ECGsegment:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_REP_{}%".format(
-            str(int(100 * threshold_PCA))
-        )
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_REP_" + thPCA + "%"
         qoi_list = ["12leads_REP"]
     else:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_{}%".format(
-            str(int(100 * threshold_PCA))
-        )
+        PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_" + thPCA + "%"
         qoi_list = ["12leads"]
 
     # directory and name of the clinical 12-lead ECG .dat file (columns: time, LI, LII, LIII, aVR, aVL, aVF, V1-V6)

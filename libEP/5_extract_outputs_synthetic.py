@@ -18,6 +18,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import libEP_DIR, OUTPUT_DIR, check_paths
 from utils import global_sensitivity_analysis as gsa
 
+
 def main():
     check_paths("OUTPUT_DIR")
 
@@ -40,43 +41,36 @@ def main():
     # directory with simulation output file(s)
     simulationfolder = basefolder + "/simulations_LHS"
 
-    # directory where all qoi will be saved (usually, local HD)
+    # directory where all qoi will be saved (if compute_PCA = True, the basis folder is used instead)
     qoifolder = basefolder + "/qoi_" + ECGsegment
 
-    # If True, compute PCA basis
+    # If True, compute PCA basis (saved in basefolder + "/PCAbasis_...", overriding qoifolder)
     compute_PCA = True
 
     # PCA threshold
     threshold_PCA = 0.99
 
     # ---> START
+
+    thPCA = str(int(100 * threshold_PCA))
+
     if "QRScomplex" in ECGsegment:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        if compute_PCA:
-            PCAbasisfolder = ""
-        else:
-            PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_150ms_{}%".format(
-                str(int(100 * threshold_PCA))
-            )
+        PCAbasisname = "PCAbasis_" + meshname + "_150ms_" + thPCA + "%"
         qoi_list = ["12leads_truncated"]
     elif "Twave" in ECGsegment:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        if compute_PCA:
-                    PCAbasisfolder = ""
-        else:
-            PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_REP_{}%".format(
-                str(int(100 * threshold_PCA))
-            )
+        PCAbasisname = "PCAbasis_" + meshname + "_REP_" + thPCA + "%"
         qoi_list = ["12leads_REP"]
     else:
-        # directory where PCA basis and training ECG dataset mean are saved, if any. Otherwise use empty string "".
-        if compute_PCA:
-                    PCAbasisfolder = ""
-        else:
-                PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_{}%".format(
-                str(int(100 * threshold_PCA))
-            )
+        PCAbasisname = "PCAbasis_" + meshname + "_" + thPCA + "%"
         qoi_list = ["12leads"]
+
+    if compute_PCA:
+        # the basis is saved in qoifolder
+        PCAbasisfolder = ""
+        qoifolder = basefolder + "/" + PCAbasisname
+    else:
+        # the basis is read from PCAbasisfolder
+        PCAbasisfolder = basefolder + "/" + PCAbasisname
 
     gsa.extract_output_from_ecg(
         libEP_DIR + "/data",
