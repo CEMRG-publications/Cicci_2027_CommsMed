@@ -24,12 +24,14 @@ def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
     meshname = "KCL1"
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # directory with current mesh in carp_txt format
     meshfolder = OUTPUT_DIR + "/mesh"
 
     # ---> START
-    basefolder = OUTPUT_DIR + "/" + meshname
+
+    # IO
     os.makedirs(basefolder, exist_ok=True)
 
     # read mesh tags from json file

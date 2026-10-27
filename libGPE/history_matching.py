@@ -20,10 +20,11 @@ from GPErks.serialization.labels import read_labels_from_file
 from utils import bayesian_history_matching
 
 
-if __name__ == "__main__":
+def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
+    meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # current ECG segment: QRScomplex | Twave
     ECGsegment = "QRScomplex"
@@ -100,3 +101,7 @@ if __name__ == "__main__":
         plot_dir=plot_dir,
         targetfile="", #target_folder + "/data/X", (only for plots)
     )
+
+
+if __name__ == "__main__":
+    main()

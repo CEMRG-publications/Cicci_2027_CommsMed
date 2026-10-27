@@ -22,19 +22,20 @@ from utils import global_sensitivity_analysis as gsa
 def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
-    meshname = "KCL1"
+    meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
+
+    # target folder (input and outputs are/will be strored here)
+    targetfolder = basefolder + "/target"
 
     # current ECG segment
     ECGsegment = "QRScomplex"
-
-    # directory where all qoi will be saved (usually, local HD)
-    qoifolder = basefolder + "/target/qoi_" + ECGsegment
 
     # PCA threshold
     threshold_PCA = 0.99
 
     # ---> START
+    qoifolder = targetfolder + "/qoi_" + ECGsegment
 
     thPCA = str(int(100 * threshold_PCA))
 
@@ -48,14 +49,10 @@ def main():
         PCAbasisfolder = basefolder + "/PCAbasis_" + meshname + "_" + thPCA + "%"
         qoi_list = ["12leads"]
 
-    # directory and name of the clinical 12-lead ECG .dat file (columns: time, LI, LII, LIII, aVR, aVL, aVF, V1-V6)
-    ecgdatafolder = basefolder + "/target"
-    ecgdatafilename = "ECG_from_BSP"
-
     gsa.extract_output_from_clinical_ecg(
         PCAbasisfolder,
-        ecgdatafolder,
-        ecgdatafilename,
+        targetfolder,
+        "ECG_from_BSP", # clinical 12-lead ECG .dat file (columns: time, LI, LII, LIII, aVR, aVL, aVF, V1-V6)
         qoifolder,
         qoi_list=qoi_list,
         tend_truncated=150,

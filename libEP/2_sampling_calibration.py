@@ -25,7 +25,10 @@ from utils import single_cell as cell
 def main():
     check_paths("OUTPUT_DIR")
 
-    hmfolder = OUTPUT_DIR + "/KCL1/History_Matching/QRScomplex"
+    meshname = "KCL1"  # NOTE: mesh basename
+
+    # directory where all outputs will be saved
+    hmfolder = OUTPUT_DIR + "/" + meshname + "/History_Matching/QRScomplex"
 
     # name of .json file with default parameter values
     paramfilename = "simulation_parameters_fitting_biv" # "simulation_parameters_fitting_biv_best-fit_QRS"

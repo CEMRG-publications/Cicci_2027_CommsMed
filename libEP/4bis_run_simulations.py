@@ -24,11 +24,13 @@ from utils import IO
 def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    # folder with "mesh", "data" and the samples (same as clusterfolder in 4_simulation_assembling.py)
-    clusterfolder = OUTPUT_DIR + "/KCL1"
+    meshname = "KCL1" # NOTE: mesh basename
 
-    # current mesh filename
-    meshname = "KCL1_gregion"
+    # folder with "mesh", "data" and the samples (same as clusterfolder in 4_simulation_assembling.py)
+    clusterfolder = OUTPUT_DIR + "/" + meshname
+
+    # name of mesh to be used in EP simulation(s)
+    meshname_EP = meshname + "_gregion"
 
     # folder with the samples (same as samplefolder in 4_simulation_assembling.py)
     samplefolder = clusterfolder + "/samples_LHS"
@@ -92,7 +94,7 @@ def main():
                     + " -meshname "
                     + clusterfolder
                     + "/mesh/"
-                    + meshname
+                    + meshname_EP
                     + " -simID "
                     + lffolder
                     + " -parab_options_file "
@@ -131,7 +133,7 @@ def main():
                     + " -meshname "
                     + clusterfolder
                     + "/mesh/"
-                    + meshname
+                    + meshname_EP
                     + " -simID "
                     + epfolder
                     + " -lead_field_dir "

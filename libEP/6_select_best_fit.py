@@ -27,11 +27,11 @@ from GPErks.train.emulator import GPEmulator
 from GPErks.serialization.path import posix_path
 
 
-if __name__ == "__main__":
+def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
-    meshname = "KCL1"
+    meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # current ECG segment: QRScomplex | Twave
     ECGsegment = "QRScomplex"
@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
     # ---> START
     # IO
+    os.makedirs(plotfolder, exist_ok=True)
     valfolder = outputfolder + "/validation_wave_" + str(final_waveno) + "_K" + str(K)
     if not os.path.exists(valfolder):
         os.mkdir(valfolder)
@@ -196,11 +197,8 @@ if __name__ == "__main__":
         plt.plot(ECG_t_mod, "r--", label="Target")
     else:
         plt.plot(ECG_t, "r--", label="Target")
-    # plt.xlim([-3,3])
     plt.legend()
-
     plt.title(f"{meshname} - {ECGsegment} : RMSE best NIMP wave_{str(final_waveno)}")
-    os.makedirs(plotfolder, exist_ok=True)
     plt.savefig(plotfolder + "/" + meshname + "_best_NIMP_wave_" + str(final_waveno))
 
     # create dictionary of K best inputs for validation
@@ -239,3 +237,7 @@ if __name__ == "__main__":
     print(f"Best NIMP according to (GPE-approx) ECG signal RMSE: {best_idx_RMSE}\n --> inputs = {best_NIMP_RMSE}")
         
     # <--- END
+
+
+if __name__ == "__main__":
+    main()

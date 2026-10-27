@@ -24,7 +24,8 @@ from utils import IO
 def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
+    meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # name of .json file with default parameter values
     paramfilename = "simulation_parameters_fitting_biv"

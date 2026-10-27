@@ -23,7 +23,10 @@ from utils import sampling
 def main():
     check_paths("OUTPUT_DIR")
 
-    hmfolder = OUTPUT_DIR + "/KCL1/History_Matching/QRScomplex"
+    meshname = "KCL1"  # NOTE: mesh basename
+
+    # directory where all outputs will be saved
+    hmfolder = OUTPUT_DIR + "/" + meshname + "/History_Matching/QRScomplex"
 
     # current wave ID
     waveno = 1

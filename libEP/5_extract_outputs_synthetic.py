@@ -22,8 +22,8 @@ from utils import global_sensitivity_analysis as gsa
 def main():
     check_paths("OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
-    meshname = "KCL1"
+    meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # current ECG segment
     ECGsegment = "QRScomplex"

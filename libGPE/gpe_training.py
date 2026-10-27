@@ -37,16 +37,15 @@ def main():
         qoi_basefolder = basefolder + "/qoi"
         gpe_folder_basename = basefolder + "/gpe"
     else:
-        # current ECG segment
+        meshname = "KCL1"  # NOTE: mesh basename
         ECGsegment = "QRScomplex"
 
-        basefolder = OUTPUT_DIR + "/KCL1/History_Matching/" + ECGsegment
-        qoi_basefolder = basefolder
-        gpe_folder_basename = basefolder + "/gpe"
+        hmfolder = OUTPUT_DIR + "/" + meshname + "/History_Matching/" + ECGsegment
+        qoi_basefolder = hmfolder
+        gpe_folder_basename = hmfolder + "/gpe"
 
         if not train_gpes:
-            # target folder for current case
-            target_folder = OUTPUT_DIR + "/KCL1/target"
+            target_folder = OUTPUT_DIR + "/" + meshname + "/target"
         else:
             # last wave included in the training data (0: initial space only)
             waveno = 0

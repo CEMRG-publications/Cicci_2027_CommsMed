@@ -26,11 +26,11 @@ from utils import processing_mesh as proc
 from utils import setup
 
 
-if __name__ == "__main__":
+def main():
     check_paths("CARP_INSTALL_DIR", "OUTPUT_DIR")
 
-    basefolder = OUTPUT_DIR + "/KCL1"
     meshname = "KCL1"  # NOTE: mesh basename
+    basefolder = OUTPUT_DIR + "/" + meshname
 
     # name of .txt file(s) with input parameters
     labelfilename_scalar = "xlabels_scalar"
@@ -255,3 +255,7 @@ if __name__ == "__main__":
 
     time_total.toc()
     # <--- END
+
+
+if __name__ == "__main__":
+    main()
