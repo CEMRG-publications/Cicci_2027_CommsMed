@@ -38,14 +38,14 @@ if __name__ == "__main__":
     # directory where samples are saved
     samplefolder = basefolder + "/samples_LHS"
 
+    # name of .txt file with ionic model parameters for heterogeneity adjustment
+    labelfilename_im = "ToRORd_dynCl" # if any, otherwise set to ""
+
     # If true, look for EAS in subendolayer mesh
     SElayer = True
 
     # If True, write heterogeneity adjustment-like file(s) for ionic model parameters and conduction velocities
     heterogeneity = True
-
-    # name of .txt file with ionic model parameters for heterogeneity adjustment
-    labelfilename_im = "ToRORd_dynCl" # if any, otherwise set to ""
 
     # number of processors
     num_proc = 8

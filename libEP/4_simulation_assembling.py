@@ -43,12 +43,16 @@ def main():
     # directory where samples are saved
     samplefolder = basefolder + "/samples_LHS"
 
-    # directory where "mesh" and "data" are temporarily saved by this script. Move or copy them
-    # into clusterfolder before running the simulations (see workflow.md)
+    # directory where "mesh" and "data" are temporarily saved by this script.
+    # Move or copy them into clusterfolder before running the simulations (see workflow.md)
     storagefolder = basefolder + "/basics"
 
+    # directory where simulations will be run: absolute path to "mesh", "data" and samplefolder
+    # This path is written in the parameter files and read by CARP.
+    clusterfolder = basefolder
+
     # set propagation type
-    propagation = "RE+"  # "RE-" OR "RE+"
+    propagation = "RE+"  # "RE-" or "RE+"
 
     # if True, use .vtx file(s) for EAS common among samples and stored in /path/to/ref_QRS/0/HPS
     hps_ref = False
@@ -58,13 +62,6 @@ def main():
 
     # folder with fibre .lon file, if different than default (if not, use empty string "")
     lonfolder_ref = "" #basefolder + "/ref_QRS/0"
-
-    # read tags for bath regions
-    tagbathfile = libEP_DIR + "/data/tag_BATH"
-
-    # directory where simulations will be run: absolute path to "mesh", "data" and samplefolder
-    # NOTE: this is written in the parameter files.
-    clusterfolder = basefolder
 
     # ---> START
     # final mesh folder
@@ -126,7 +123,7 @@ def main():
         labelfilename_scalar,
         samplefolder,
         clusterfolder + "/" + os.path.basename(samplefolder),
-        tagbathfile,
+        libEP_DIR + "/data/tag_BATH",
         libEP_DIR + "/data/tune_CV_ToRORd_dynCl",
         im=ionicmodelname,
         prepacing_lats="", # path to LATs.dat file
