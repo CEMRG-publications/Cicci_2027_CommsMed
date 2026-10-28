@@ -1,0 +1,26 @@
+name: cicci_commsmed
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12.7
+  - pip
+  - pip:
+      # setuptools below 81: the pinned GPErks imports pkg_resources
+      - setuptools==80.10.2
+      # numpy below 2: the pinned GPErks uses numpy.infty
+      - numpy==1.26.4
+      # pandas 2.1 or later: DataFrame.map
+      - pandas==2.3.3
+      - scipy==1.17.1
+      - scikit-learn==1.9.1
+      - matplotlib==3.11.2
+      - seaborn==0.13.2
+      - natsort==8.4.0
+      - pytictoc==1.5.3
+      - SALib==1.5.1
+      - torch==2.14.1
+      - torchmetrics==1.9.0
+      - gpytorch==1.15.2
+      - botorch==0.18.1
+      # GPErks has no version tags: install the commit used for this work
+      - git+https://github.com/stelong/GPErks.git@dd8b7af9f8074ca1d4667c6c88532bc7b28601ad

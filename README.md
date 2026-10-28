@@ -24,6 +24,7 @@ The single-cell model (ToRORd_dynCl) has its own global (Sobol) sensitivity anal
 | --- | --- |
 | `config.py` | The two paths you must set (see below). |
 | `workflow.md` | Step-by-step instructions, with the settings of each script. |
+| `environment.yml` | Conda environment: Python 3.12.7 and the Python packages, GPErks included (see "Requirements"). |
 | `libEP/` | Mesh, sampling, simulation and ECG scripts (numbered in the order of use) and `libEP/utils`. |
 | `libEP/data/` | Parameter files, parameter ranges, label files, CARPentry parameter files and tags. |
 | `libGPE/` | `gpe_training.py`, `history_matching.py`, `sensitivity_analysis.py` and `libGPE/utils`. |
@@ -39,22 +40,30 @@ The single-cell model (ToRORd_dynCl) has its own global (Sobol) sensitivity anal
 
 ## Requirements
 
-- Python 3.12.7.
 - CARPentry release 2024 (academic licence), with meshtool and mguvc. They are not distributed here. Obtain them from the CARPentry authors.
-- GPErks, at upstream commit `dd8b7af` (see "GPErks").
-- Python packages: GPErks, SALib, gpytorch, matplotlib, natsort, numpy, pandas, pytictoc, scipy, seaborn, scikit-learn, torch, torchmetrics.
-  Versions used: [TO BE ADDED]. NumPy must be below 2 (the pinned GPErks uses `numpy.infty`). `setuptools` must be below 81 (the pinned GPErks imports `pkg_resources`). pandas 2.1 or later is needed (`DataFrame.map`).
+- Python 3.12.7 and the Python packages, with GPErks at the upstream commit `dd8b7af` (see "GPErks"). They are all listed, with their versions, in `environment.yml`. Create the environment with:
+
+  ```
+  conda env create -f environment.yml
+  conda activate cicci_commsmed
+  ```
+
+  Three versions are limits, not only choices: NumPy must be below 2 (the pinned GPErks uses `numpy.infty`), `setuptools` must be below 81 (the pinned GPErks imports `pkg_resources`), and pandas 2.1 or later is needed (`DataFrame.map`).
 
 ## GPErks
 
-GPErks has no version tags on GitHub, and its `setup.py` says 0.1.2 in many commits. The GPErks used for this work is the upstream commit `dd8b7af` (18 September 2024). Install that commit, not the latest one.
+GPErks has no version tags on GitHub, and its `setup.py` says 0.1.2 in many commits. The GPErks used for this work is the upstream commit `dd8b7af` (18 September 2024). `environment.yml` installs that commit from GitHub. Do not use the latest one.
 
 Two files are modified versions of GPErks files (MIT licence, notice in each file and in `libGPE/copy_into_gperks/LICENSE_GPErks.txt`):
 
 - `gsa_mod.py` uses SALib (first-order and total-order indices only) and has its own box plot and heat map functions, which save the figures.
 - `history_matching_mod.py` plots the inputs in several figures (up to 19 inputs each), can mark a target point, and has a new `plot_wave_diagonal`.
 
-Copy both files into the folder `GPErks/perks/` of your GPErks installation, next to the original files. They do not replace anything.
+Copy both files into the folder `GPErks/perks/` of your GPErks installation, next to the original files. They do not replace anything. With the environment active, this command prints that folder:
+
+```
+python -c "import GPErks, os; print(os.path.join(os.path.dirname(GPErks.__file__), 'perks'))"
+```
 
 ## Third-party code
 
@@ -64,7 +73,7 @@ Strocchi M, Longobardi S, Augustin CM, Gsell MAF, Petras A, Rinaldi CA, Vigmond 
 
 ## Setup
 
-1. Install the requirements above.
+1. Install CARPentry and create the conda environment (see "Requirements").
 2. Open `config.py` and set
    - `CARP_INSTALL_DIR`: the folder where CARPentry is installed (it must contain `bin/carp.pt`, `meshtool/meshtool` and `carputils`);
    - `OUTPUT_DIR`: the folder where all results are written.
