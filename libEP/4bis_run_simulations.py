@@ -39,15 +39,15 @@ def main():
     simulationfolder = clusterfolder + "/simulations_LHS"
     os.makedirs(simulationfolder, exist_ok=True)
 
-    # parameter file with the EP model parameters
-    parfile_base = clusterfolder + "/data/pfile_BASE.par"
-    parfile_lf = clusterfolder + "/data/pfile_LF.par"
-    parfile_ecg = clusterfolder + "/data/pfile_ECG.par"
-
     # number of processors
     num_proc = 64
 
     # ---> START
+
+    # parameter file with the EP model parameters
+    parfile_base = clusterfolder + "/data/pfile_BASE.par"
+    parfile_lf = clusterfolder + "/data/pfile_LF.par"
+    parfile_ecg = clusterfolder + "/data/pfile_ECG.par"
 
     # find executables
     CARP = CARP_INSTALL_DIR + "/bin/carp.pt"

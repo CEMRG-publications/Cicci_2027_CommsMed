@@ -61,7 +61,6 @@ def plot_cumvar(xlabels, var_array, plotfolder, L_max=None):
         L_max = np.size(var_array, axis=1)
 
     # rank according to absolute cumulative variance
-    # order_list = np.argsort(np.sum(var_array, axis=1))
     order_list = np.argsort(np.sum(var_array[:, :L_max], axis=1))
     var_array = var_array[order_list, :]
     xlabels = np.array(xlabels)[order_list].tolist()
@@ -74,7 +73,6 @@ def plot_cumvar(xlabels, var_array, plotfolder, L_max=None):
             col = plt.cm.tab20c(range(L_max))
         else:
             col = plt.cm.GnBu(np.linspace(0, 1, L_max))
-        # col = plt.cm.viridis(1-np.linspace(0, 1, L_max))
         ax.barh(
             inputs,
             var_array[:, l],
@@ -84,9 +82,6 @@ def plot_cumvar(xlabels, var_array, plotfolder, L_max=None):
             alpha=0.8,
         )
         start += var_array[:, l]
-        # ax.set_title(
-        #    "Cumulative variance for {} PC-components".format(L_max), fontsize=15
-        # )
         ax.set_title(
             "Cumulative sensitivity indices for {} principal components".format(L_max),
             fontsize=15,
