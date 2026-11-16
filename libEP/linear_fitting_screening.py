@@ -42,14 +42,14 @@ def main():
     # directory where samples are saved
     samplefolder = basefolder + "/samples_fitting"
 
-    # PCA threshold
-    threshold_PCA = 0.99
-
     # cut-off for model parameters [for HM]
     cutoff = 0.95
 
     # If True, plot ECGs and variance comparision
-    visualise = True
+    visualise = False
+
+    # threshold used to compute the PCA basis
+    threshold_PCA = 0.99
 
     # ---> START
 
@@ -102,7 +102,6 @@ def main():
         WLname=WLname,
         ECGname=ECGname,
         cutoff=cutoff,
-        threshold=0.1,
         visualise=visualise,
     )
 

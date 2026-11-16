@@ -40,6 +40,8 @@ def main():
     samplefolder = basefolder + "/samples_fitting"
 
     # ---> START
+
+    # IO
     os.makedirs(basefolder, exist_ok=True)
 
     # check if output folder already exists to avoid overwriting
@@ -69,7 +71,7 @@ def main():
         N_samples=2 * N_param,
     )
 
-    ## --------------- SCALAR SAMPLING --------------- ##
+    # scalar sampling
     sampling.sample_fitting(
         libEP_DIR + "/data",
         paramfilename,
