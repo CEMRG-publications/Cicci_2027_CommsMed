@@ -105,7 +105,7 @@ def main():
     )
 
     # compute scalar outputs
-    cell.compute_qoi(samplefolder, basefolder + "/qoi", pca_threshold=90)
+    cell.compute_qoi(samplefolder, basefolder + "/qoi", labelfilename, pca_threshold=90)
     # <--- END
 
 

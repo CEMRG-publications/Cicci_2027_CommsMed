@@ -582,7 +582,7 @@ def check_whole_organ_samples(
     return
 
 
-def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
+def compute_qoi(samplefolder, outputfolder, labelfilename, pca_threshold=95, visualise=True):
     """Compute quantities of interest from action potential.
 
     Parameters
@@ -591,6 +591,8 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
         Path to folder with all sample(s) details.
     outputfolder: str
         Path to the directory where the sample qoi will be saved.
+    labelfilename: str
+        Name of .txt file with labels of all ionic model parameters (without extension), in the sample folder.
     pca_threshold: int
         Percentage of output (i.e., dVm/dt) variance to be explained by the selected PCA modes. Default: 95 [%].
     visualise: bool
@@ -626,6 +628,9 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
     else:
         readme = IO.read_text(readmefile)
 
+    # find .txt file with input labels
+    labels = IO.read_text(samplefolder + "/" + labelfilename)
+
     # find ionic model parameters for each sample
     for i in natsorted(os.listdir(samplefolder)):
         if not ".txt" in i and str(i) in readme[1:]:
@@ -636,6 +641,9 @@ def compute_qoi(samplefolder, outputfolder, pca_threshold=95, visualise=True):
 
             # load dictionary with all current simulation parameters
             par_imp_dct = IO.read_json(paramfile)
+
+            # keep only keys listed in labels.txt
+            par_imp_dct = {k: v for k, v in par_imp_dct.items() if k in labels}
 
             # append current simulation scalar parameters
             xl_list.append([key for _, key in enumerate(par_imp_dct)])

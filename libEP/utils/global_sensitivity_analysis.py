@@ -592,7 +592,8 @@ def ranking_PCAmode_variance(
     cumvar = np.sum(var_array, axis=1)
 
     # plot cumulative variance
-    plots.plot_cumvar(xlabels, var_array, plotfolder, L_max=L)
+    if visualise:
+        plots.plot_cumvar(xlabels, var_array, plotfolder, L_max=L)
 
     # normalise cumulative variance
     cumvar_norm = cumvar / np.sum(cumvar)
