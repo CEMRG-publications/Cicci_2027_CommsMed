@@ -4,7 +4,7 @@ Core code of a patient-specific ventricular electrophysiology pipeline: from a b
 
 This code accompanies the manuscript "Personalising ventricular electrophysiology models from CT and ECG for 3D activation imaging in healthy cases" (Communications Medicine, [CITATION AND DOI TO BE ADDED]).
 
-Version: v1.0.0. Licence: MIT (see `LICENSE`).
+Version: v1.0.0, archived on Zenodo: [doi:10.5281/zenodo.24464560](https://doi.org/10.5281/zenodo.24464560). Licence: MIT (see `LICENSE`).
 
 ## What the pipeline does
 
