@@ -107,7 +107,6 @@ def save_fixed_parameters(
                 )
             par_dct[key] = par_all_dct[key]
 
-    # TODO: check if it works correctly in all cases!!!
     # CALIBRATION: find parameters with at least one among theta, grad_rho and grad_z in labelfile
     all_spatial_inputs = []
     for key in list(par_dct.keys()):
@@ -118,7 +117,6 @@ def save_fixed_parameters(
                 .replace("_grad_z", "")
             )
 
-    # TODO: check if it works correctly in all cases!!!
     # CALIBRATION: remove spatially varying parameters that are not inputs of interest, unless the gradient is different to 1
     if len(all_spatial_inputs):
         tmp = {}
@@ -202,7 +200,6 @@ def assemble_simulation_param(
     labelfile = labelfolder + "/" + labelfilename
     par_dct = {}
 
-    ## TODO: check if it works correctley
     for key in IO.read_labels(labelfile):
         if key in list(par_dct.keys()):
             raise Exception(
@@ -659,7 +656,6 @@ def sample_gradient_param(
             H[:, :, k, 1] = lhd(par_range, N_samples) / H[:, :, k, 0]  # grad_rho
             H[:, :, k, 2] = lhd(par_range, N_samples) / H[:, :, k, 0]  # grad_z
 
-        # TODO: check that it works correctly for NON usr-defined parameter ranges
         # constrain ranges for gradients
         if len(usr_grad) > 0:
             for j, key in enumerate(par_keys):
