@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below and this software (Zenodo DOI)."
+type: software
+title: "Cicci_2027_CommsMed"
+abstract: "Core code of a patient-specific ventricular electrophysiology pipeline: from a biventricular and torso mesh to the calibration of the model parameters on a 12-lead ECG."
+version: "1.0.0"
+license: MIT
+repository-code: "https://github.com/CEMRG-publications/Cicci_2027_CommsMed"
+keywords:
+  - cardiac electrophysiology
+  - patient-specific modelling
+  - 12-lead ECG
+  - Gaussian process emulators
+  - Bayesian history matching
+  - sensitivity analysis
+authors:
+  - {family-names: Cicci, given-names: Ludovica, orcid: "https://orcid.org/0000-0002-2544-9889"}
+  - {family-names: Qian, given-names: Shuang}
+  - {family-names: Rodero, given-names: Cristobal}
+  - {family-names: Strocchi, given-names: Marina}
+  - {family-names: Corrado, given-names: Cesare}
+  - {family-names: Campos, given-names: Fernando O.}
+  - {family-names: Malik, given-names: Shambhavi}
+  - {family-names: Lee, given-names: Angela W. C.}
+  - {family-names: Qayyum, given-names: Abdul}
+  - {family-names: Gillette, given-names: Karli}
+  - {family-names: Isbister, given-names: Julia C.}
+  - {family-names: Sy, given-names: Raymond W.}
+  - {family-names: Lee, given-names: Michael}
+  - {family-names: Noseda, given-names: Michela}
+  - {family-names: Wilkinson, given-names: Richard D.}
+  - {family-names: Plank, given-names: Gernot}
+  - {family-names: Bishop, given-names: Martin}
+  - {family-names: Niederer, given-names: Steven A.}
+preferred-citation:
+  type: article
+  title: "Personalising ventricular electrophysiology models from CT and ECG for 3D activation imaging in healthy cases"
+  journal: "Communications Medicine"
+  status: in-press
+  authors:
+    - {family-names: Cicci, given-names: Ludovica, orcid: "https://orcid.org/0000-0002-2544-9889"}
+    - {family-names: Qian, given-names: Shuang}
+    - {family-names: Rodero, given-names: Cristobal}
+    - {family-names: Strocchi, given-names: Marina}
+    - {family-names: Corrado, given-names: Cesare}
+    - {family-names: Campos, given-names: Fernando O.}
+    - {family-names: Malik, given-names: Shambhavi}
+    - {family-names: Lee, given-names: Angela W. C.}
+    - {family-names: Qayyum, given-names: Abdul}
+    - {family-names: Gillette, given-names: Karli}
+    - {family-names: Isbister, given-names: Julia C.}
+    - {family-names: Sy, given-names: Raymond W.}
+    - {family-names: Lee, given-names: Michael}
+    - {family-names: Noseda, given-names: Michela}
+    - {family-names: Wilkinson, given-names: Richard D.}
+    - {family-names: Plank, given-names: Gernot}
+    - {family-names: Bishop, given-names: Martin}
+    - {family-names: Niederer, given-names: Steven A.}
